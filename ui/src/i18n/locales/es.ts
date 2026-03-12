@@ -71,7 +71,7 @@ export const es: TranslationMap = {
       uptime: "Tiempo de actividad",
       tickInterval: "Intervalo de tick",
       lastChannelsRefresh: "Última actualización de canales",
-      channelsHint: "Usa Canales para vincular WhatsApp, Telegram, Discord, Signal o iMessage.",
+      channelsHint: "Usa Canales para vincular Telegram.",
     },
     stats: {
       instances: "Instancias",

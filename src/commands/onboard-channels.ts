@@ -2,7 +2,6 @@ import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent
 import { listChannelPluginCatalogEntries } from "../channels/plugins/catalog.js";
 import { resolveChannelDefaultAccountId } from "../channels/plugins/helpers.js";
 import { listChannelPlugins, getChannelPlugin } from "../channels/plugins/index.js";
-import type { ChannelMeta } from "../channels/plugins/types.js";
 import {
   formatChannelPrimerLine,
   formatChannelSelectionLine,
@@ -115,11 +114,15 @@ async function collectChannelStatus(params: {
   options?: SetupChannelsOptions;
   accountOverrides: Partial<Record<ChannelChoice, string>>;
 }): Promise<ChannelStatusSummary> {
-  const installedPlugins = listChannelPlugins();
+  const surfaceChannels = listChatChannels();
+  const surfaceIds = new Set(surfaceChannels.map((meta) => meta.id));
+  const installedPlugins = listChannelPlugins().filter((plugin) =>
+    surfaceIds.has(plugin.id as ChannelChoice),
+  );
   const installedIds = new Set(installedPlugins.map((plugin) => plugin.id));
   const workspaceDir = resolveAgentWorkspaceDir(params.cfg, resolveDefaultAgentId(params.cfg));
   const catalogEntries = listChannelPluginCatalogEntries({ workspaceDir }).filter(
-    (entry) => !installedIds.has(entry.id),
+    (entry) => surfaceIds.has(entry.id as ChannelChoice) && !installedIds.has(entry.id),
   );
   const statusEntries = await Promise.all(
     listChannelOnboardingAdapters().map((adapter) =>
@@ -131,7 +134,7 @@ async function collectChannelStatus(params: {
     ),
   );
   const statusByChannel = new Map(statusEntries.map((entry) => [entry.channel, entry]));
-  const fallbackStatuses = listChatChannels()
+  const fallbackStatuses = surfaceChannels
     .filter((meta) => !statusByChannel.has(meta.id))
     .map((meta) => {
       const configured = isChannelConfigured(params.cfg, meta.id);
@@ -326,25 +329,7 @@ export async function setupChannels(
     label: meta.label,
     blurb: meta.blurb,
   }));
-  const coreIds = new Set(corePrimer.map((entry) => entry.id));
-  const primerChannels = [
-    ...corePrimer,
-    ...installedPlugins
-      .filter((plugin) => !coreIds.has(plugin.id))
-      .map((plugin) => ({
-        id: plugin.id,
-        label: plugin.meta.label,
-        blurb: plugin.meta.blurb,
-      })),
-    ...catalogEntries
-      .filter((entry) => !coreIds.has(entry.id as ChannelChoice))
-      .map((entry) => ({
-        id: entry.id as ChannelChoice,
-        label: entry.meta.label,
-        blurb: entry.meta.blurb,
-      })),
-  ];
-  await noteChannelPrimer(prompter, primerChannels);
+  await noteChannelPrimer(prompter, corePrimer);
 
   const quickstartDefault =
     options?.initialSelection?.[0] ?? resolveQuickstartDefault(statusByChannel);
@@ -411,32 +396,14 @@ export async function setupChannels(
 
   const getChannelEntries = () => {
     const core = listChatChannels();
-    const installed = listChannelPlugins();
-    const installedIds = new Set(installed.map((plugin) => plugin.id));
-    const workspaceDir = resolveAgentWorkspaceDir(next, resolveDefaultAgentId(next));
-    const catalog = listChannelPluginCatalogEntries({ workspaceDir }).filter(
-      (entry) => !installedIds.has(entry.id),
-    );
-    const metaById = new Map<string, ChannelMeta>();
-    for (const meta of core) {
-      metaById.set(meta.id, meta);
-    }
-    for (const plugin of installed) {
-      metaById.set(plugin.id, plugin.meta);
-    }
-    for (const entry of catalog) {
-      if (!metaById.has(entry.id)) {
-        metaById.set(entry.id, entry.meta);
-      }
-    }
-    const entries = Array.from(metaById, ([id, meta]) => ({
-      id: id as ChannelChoice,
+    const entries = core.map((meta) => ({
+      id: meta.id,
       meta,
     }));
     return {
       entries,
-      catalog,
-      catalogById: new Map(catalog.map((entry) => [entry.id as ChannelChoice, entry])),
+      catalog: [] as typeof catalogEntries,
+      catalogById: new Map<ChannelChoice, (typeof catalogEntries)[number]>(),
     };
   };
 

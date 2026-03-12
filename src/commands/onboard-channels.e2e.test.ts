@@ -191,17 +191,21 @@ describe("setupChannels", () => {
   beforeEach(() => {
     setDefaultChannelPluginRegistryForTests();
   });
-  it("QuickStart uses single-select (no multiselect) and doesn't prompt for Telegram token when WhatsApp is chosen", async () => {
-    const select = vi.fn(async () => "whatsapp");
+  it("QuickStart uses single-select and only offers Telegram on the private surface", async () => {
+    const select = vi.fn(async ({ message, options }: { message: string; options: unknown[] }) => {
+      if (message === "Select channel (QuickStart)") {
+        const values = (options as Array<{ value: string }>).map((option) => option.value);
+        expect(values).toEqual(["telegram", "__skip__"]);
+        return "telegram";
+      }
+      return "__done__";
+    });
     const multiselect = vi.fn(async () => {
       throw new Error("unexpected multiselect");
     });
     const text = vi.fn(async ({ message }: { message: string }) => {
       if (message.includes("Enter Telegram bot token")) {
-        throw new Error("unexpected Telegram token prompt");
-      }
-      if (message.includes("Your personal WhatsApp number")) {
-        return "+15555550123";
+        return "123:token";
       }
       throw new Error(`unexpected text prompt: ${message}`);
     });
@@ -214,7 +218,6 @@ describe("setupChannels", () => {
 
     await runSetupChannels({} as OpenClawConfig, prompter, {
       quickstartDefaults: true,
-      forceAllowFromChannels: ["whatsapp"],
     });
 
     expect(select).toHaveBeenCalledWith(

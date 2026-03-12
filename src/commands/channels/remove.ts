@@ -1,9 +1,9 @@
 import { resolveChannelDefaultAccountId } from "../../channels/plugins/helpers.js";
 import {
   getChannelPlugin,
-  listChannelPlugins,
   normalizeChannelId,
 } from "../../channels/plugins/index.js";
+import { listChatChannels } from "../../channels/registry.js";
 import { type OpenClawConfig, writeConfigFile } from "../../config/config.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../routing/session-key.js";
 import { defaultRuntime, type RuntimeEnv } from "../../runtime.js";
@@ -45,9 +45,9 @@ export async function channelsRemoveCommand(
     await prompter.intro("Remove channel account");
     const selectedChannel = await prompter.select({
       message: "Channel",
-      options: listChannelPlugins().map((plugin) => ({
-        value: plugin.id,
-        label: plugin.meta.label,
+      options: listChatChannels().map((meta) => ({
+        value: meta.id,
+        label: meta.label,
       })),
     });
     channel = selectedChannel;

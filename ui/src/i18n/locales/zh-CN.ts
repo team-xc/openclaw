@@ -84,7 +84,7 @@ export const zh_CN: TranslationMap = {
       uptime: "运行时间",
       tickInterval: "刻度间隔",
       lastChannelsRefresh: "最后频道刷新",
-      channelsHint: "使用频道链接 WhatsApp、Telegram、Discord、Signal 或 iMessage。",
+      channelsHint: "使用频道链接 Telegram。",
     },
     stats: {
       instances: "实例",

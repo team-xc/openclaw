@@ -71,7 +71,7 @@ export function registerChannelsCli(program: Command) {
   const channelNames = formatCliChannelOptions();
   const channels = program
     .command("channels")
-    .description("Manage connected chat channels and accounts")
+    .description("Manage Telegram channel accounts")
     .addHelpText(
       "after",
       () =>
@@ -80,9 +80,9 @@ export function registerChannelsCli(program: Command) {
           ["openclaw channels status --probe", "Run channel status checks and probes."],
           [
             "openclaw channels add --channel telegram --token <token>",
-            "Add or update a channel account non-interactively.",
+            "Add or update a Telegram bot account non-interactively.",
           ],
-          ["openclaw channels login --channel whatsapp", "Link a WhatsApp Web account."],
+          ["openclaw channels remove --channel telegram --account default", "Disable Telegram."],
         ])}\n\n${theme.muted("Docs:")} ${formatDocsLink(
           "/cli/channels",
           "docs.openclaw.ai/cli/channels",
@@ -163,7 +163,7 @@ export function registerChannelsCli(program: Command) {
 
   channels
     .command("add")
-    .description("Add or update a channel account")
+    .description("Add or update a Telegram account")
     .option("--channel <name>", `Channel (${channelNames})`)
     .option("--account <id>", "Account id (default when omitted)")
     .option("--name <name>", "Display name for this account")
@@ -207,7 +207,7 @@ export function registerChannelsCli(program: Command) {
 
   channels
     .command("remove")
-    .description("Disable or delete a channel account")
+    .description("Disable or delete a Telegram account")
     .option("--channel <name>", `Channel (${channelNames})`)
     .option("--account <id>", "Account id (default when omitted)")
     .option("--delete", "Delete config entries (no prompt)", false)
@@ -220,7 +220,7 @@ export function registerChannelsCli(program: Command) {
 
   channels
     .command("login")
-    .description("Link a channel account (if supported)")
+    .description("Link a Telegram account (if supported)")
     .option("--channel <channel>", "Channel alias (auto when only one is configured)")
     .option("--account <id>", "Account id (accountId)")
     .option("--verbose", "Verbose connection logs", false)
@@ -239,7 +239,7 @@ export function registerChannelsCli(program: Command) {
 
   channels
     .command("logout")
-    .description("Log out of a channel session (if supported)")
+    .description("Log out of a Telegram session (if supported)")
     .option("--channel <channel>", "Channel alias (auto when only one is configured)")
     .option("--account <id>", "Account id (accountId)")
     .action(async (opts) => {

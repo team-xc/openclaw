@@ -165,7 +165,7 @@ const entries: SubCliEntry[] = [
   },
   {
     name: "channels",
-    description: "Manage connected chat channels (Telegram, Discord, etc.)",
+    description: "Manage connected Telegram channel accounts",
     hasSubcommands: true,
     register: async (program) => {
       const mod = await import("../channels-cli.js");
