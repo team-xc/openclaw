@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveOpenClawPackageRoot } from "../infra/openclaw-root.js";
 import { pathExists } from "../utils.js";
+import { getBuiltInWorkspaceTemplate } from "./workspace-templates.builtin.js";
 
 const FALLBACK_TEMPLATE_DIR = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -57,3 +58,5 @@ export function resetWorkspaceTemplateDirCache() {
   cachedTemplateDir = undefined;
   resolvingTemplateDir = undefined;
 }
+
+export { getBuiltInWorkspaceTemplate };

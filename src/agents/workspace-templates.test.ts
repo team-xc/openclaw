@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { getBuiltInWorkspaceTemplate } from "./workspace-templates.builtin.js";
 import {
   resetWorkspaceTemplateDirCache,
   resolveWorkspaceTemplateDir,
@@ -49,6 +50,12 @@ describe("resolveWorkspaceTemplateDir", () => {
     const moduleUrl = pathToFileURL(path.join(distDir, "model-selection.mjs")).toString();
 
     const resolved = await resolveWorkspaceTemplateDir({ cwd: distDir, moduleUrl });
-    expect(path.normalize(resolved)).toBe(path.resolve("docs", "reference", "templates"));
+    expect(path.normalize(resolved)).toBe(path.join(root, "docs", "reference", "templates"));
+  });
+
+  it("provides a built-in AGENTS template when docs templates are unavailable", () => {
+    const template = getBuiltInWorkspaceTemplate("AGENTS.md");
+    expect(template).toContain("# AGENTS.md - Your Workspace");
+    expect(template).toContain("## Session Startup");
   });
 });

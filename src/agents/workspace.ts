@@ -7,7 +7,7 @@ import { resolveRequiredHomeDir } from "../infra/home-dir.js";
 import { runCommandWithTimeout } from "../process/exec.js";
 import { isCronSessionKey, isSubagentSessionKey } from "../routing/session-key.js";
 import { resolveUserPath } from "../utils.js";
-import { resolveWorkspaceTemplateDir } from "./workspace-templates.js";
+import { getBuiltInWorkspaceTemplate, resolveWorkspaceTemplateDir } from "./workspace-templates.js";
 
 export function resolveDefaultAgentWorkspaceDir(
   env: NodeJS.ProcessEnv = process.env,
@@ -114,6 +114,10 @@ async function loadTemplate(name: string): Promise<string> {
       const content = await fs.readFile(templatePath, "utf-8");
       return stripFrontMatter(content);
     } catch {
+      const fallback = getBuiltInWorkspaceTemplate(name);
+      if (fallback !== undefined) {
+        return stripFrontMatter(fallback);
+      }
       throw new Error(
         `Missing workspace template: ${name} (${templatePath}). Ensure docs/reference/templates are packaged.`,
       );
