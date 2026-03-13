@@ -20,6 +20,7 @@ import {
   setTelegramThreadBindingIdleTimeoutBySessionKey,
   setTelegramThreadBindingMaxAgeBySessionKey,
 } from "../../telegram/thread-bindings.js";
+import { INTERNAL_MESSAGE_CHANNEL, normalizeMessageChannel } from "../../utils/message-channel.js";
 import { formatTokenCount, formatUsd } from "../../utils/usage-format.js";
 import { parseActivationCommand } from "../group-activation.js";
 import { parseSendPolicyCommand } from "../send-policy.js";
@@ -135,10 +136,17 @@ export const handleActivationCommand: CommandHandler = async (params, allowTextC
   if (!activationCommand.hasCommand) {
     return null;
   }
+  const normalizedSurface = normalizeMessageChannel(params.command.channel);
+  const isChineseSurface =
+    normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
   if (!params.isGroup) {
     return {
       shouldContinue: false,
-      reply: { text: "⚙️ Group activation only applies to group chats." },
+      reply: {
+        text: isChineseSurface
+          ? "[系统] 群组激活仅适用于群聊。"
+          : "⚙️ Group activation only applies to group chats.",
+      },
     };
   }
   if (!params.command.isAuthorizedSender) {
@@ -150,7 +158,11 @@ export const handleActivationCommand: CommandHandler = async (params, allowTextC
   if (!activationCommand.mode) {
     return {
       shouldContinue: false,
-      reply: { text: "⚙️ Usage: /activation mention|always" },
+      reply: {
+        text: isChineseSurface
+          ? "[系统] 用法：/activation mention|always"
+          : "⚙️ Usage: /activation mention|always",
+      },
     };
   }
   if (params.sessionEntry && params.sessionStore && params.sessionKey) {
@@ -161,7 +173,9 @@ export const handleActivationCommand: CommandHandler = async (params, allowTextC
   return {
     shouldContinue: false,
     reply: {
-      text: `⚙️ Group activation set to ${activationCommand.mode}.`,
+      text: isChineseSurface
+        ? `[系统] 已将群组激活模式设为 ${activationCommand.mode}。`
+        : `⚙️ Group activation set to ${activationCommand.mode}.`,
     },
   };
 };
@@ -174,6 +188,9 @@ export const handleSendPolicyCommand: CommandHandler = async (params, allowTextC
   if (!sendPolicyCommand.hasCommand) {
     return null;
   }
+  const normalizedSurface = normalizeMessageChannel(params.command.channel);
+  const isChineseSurface =
+    normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
   if (!params.command.isAuthorizedSender) {
     logVerbose(
       `Ignoring /send from unauthorized sender: ${params.command.senderId || "<unknown>"}`,
@@ -183,7 +200,11 @@ export const handleSendPolicyCommand: CommandHandler = async (params, allowTextC
   if (!sendPolicyCommand.mode) {
     return {
       shouldContinue: false,
-      reply: { text: "⚙️ Usage: /send on|off|inherit" },
+      reply: {
+        text: isChineseSurface
+          ? "[系统] 用法：/send on|off|inherit"
+          : "⚙️ Usage: /send on|off|inherit",
+      },
     };
   }
   if (params.sessionEntry && params.sessionStore && params.sessionKey) {
@@ -202,7 +223,11 @@ export const handleSendPolicyCommand: CommandHandler = async (params, allowTextC
         : "off";
   return {
     shouldContinue: false,
-    reply: { text: `⚙️ Send policy set to ${label}.` },
+    reply: {
+      text: isChineseSurface
+        ? `[系统] 已将发送策略设为 ${label}。`
+        : `⚙️ Send policy set to ${label}.`,
+    },
   };
 };
 
@@ -214,6 +239,9 @@ export const handleUsageCommand: CommandHandler = async (params, allowTextComman
   if (normalized !== "/usage" && !normalized.startsWith("/usage ")) {
     return null;
   }
+  const normalizedSurface = normalizeMessageChannel(params.command.channel);
+  const isChineseSurface =
+    normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
   if (!params.command.isAuthorizedSender) {
     logVerbose(
       `Ignoring /usage from unauthorized sender: ${params.command.senderId || "<unknown>"}`,
@@ -243,6 +271,10 @@ export const handleUsageCommand: CommandHandler = async (params, allowTextComman
       sessionCost || sessionTokens
         ? `Session ${sessionCost ?? "n/a"}${sessionSuffix}${sessionTokens ? ` · ${sessionTokens} tokens` : ""}`
         : "Session n/a";
+    const sessionLineZh =
+      sessionCost || sessionTokens
+        ? `会话 ${sessionCost ?? "n/a"}${sessionSuffix}${sessionTokens ? ` · ${sessionTokens} tokens` : ""}`
+        : "会话 n/a";
 
     const todayKey = new Date().toLocaleDateString("en-CA");
     const todayEntry = summary.daily.find((entry) => entry.date === todayKey);
@@ -250,22 +282,32 @@ export const handleUsageCommand: CommandHandler = async (params, allowTextComman
     const todayMissing = todayEntry?.missingCostEntries ?? 0;
     const todaySuffix = todayMissing > 0 ? " (partial)" : "";
     const todayLine = `Today ${todayCost ?? "n/a"}${todaySuffix}`;
+    const todayLineZh = `今日 ${todayCost ?? "n/a"}${todaySuffix}`;
 
     const last30Cost = formatUsd(summary.totals.totalCost);
     const last30Missing = summary.totals.missingCostEntries;
     const last30Suffix = last30Missing > 0 ? " (partial)" : "";
     const last30Line = `Last 30d ${last30Cost ?? "n/a"}${last30Suffix}`;
+    const last30LineZh = `近 30 天 ${last30Cost ?? "n/a"}${last30Suffix}`;
 
     return {
       shouldContinue: false,
-      reply: { text: `💸 Usage cost\n${sessionLine}\n${todayLine}\n${last30Line}` },
+      reply: {
+        text: isChineseSurface
+          ? `[系统] 用量费用\n${sessionLineZh}\n${todayLineZh}\n${last30LineZh}`
+          : `💸 Usage cost\n${sessionLine}\n${todayLine}\n${last30Line}`,
+      },
     };
   }
 
   if (rawArgs && !requested) {
     return {
       shouldContinue: false,
-      reply: { text: "⚙️ Usage: /usage off|tokens|full|cost" },
+      reply: {
+        text: isChineseSurface
+          ? "[系统] 用法：/usage off|tokens|full|cost"
+          : "⚙️ Usage: /usage off|tokens|full|cost",
+      },
     };
   }
 
@@ -287,7 +329,7 @@ export const handleUsageCommand: CommandHandler = async (params, allowTextComman
   return {
     shouldContinue: false,
     reply: {
-      text: `⚙️ Usage footer: ${next}.`,
+      text: isChineseSurface ? `[系统] 已将用量尾注设为 ${next}。` : `⚙️ Usage footer: ${next}.`,
     },
   };
 };
@@ -300,6 +342,9 @@ export const handleFastCommand: CommandHandler = async (params, allowTextCommand
   if (normalized !== "/fast" && !normalized.startsWith("/fast ")) {
     return null;
   }
+  const normalizedSurface = normalizeMessageChannel(params.command.channel);
+  const isChineseSurface =
+    normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
   if (!params.command.isAuthorizedSender) {
     logVerbose(
       `Ignoring /fast from unauthorized sender: ${params.command.senderId || "<unknown>"}`,
@@ -320,7 +365,13 @@ export const handleFastCommand: CommandHandler = async (params, allowTextCommand
       state.source === "config" ? " (config)" : state.source === "default" ? " (default)" : "";
     return {
       shouldContinue: false,
-      reply: { text: `⚙️ Current fast mode: ${state.enabled ? "on" : "off"}${suffix}.` },
+      reply: {
+        text: isChineseSurface
+          ? `[系统] 当前快速模式：${state.enabled ? "on" : "off"}${
+              state.source === "config" ? "（配置）" : state.source === "default" ? "（默认）" : ""
+            }。`
+          : `⚙️ Current fast mode: ${state.enabled ? "on" : "off"}${suffix}.`,
+      },
     };
   }
 
@@ -328,7 +379,11 @@ export const handleFastCommand: CommandHandler = async (params, allowTextCommand
   if (nextMode === undefined) {
     return {
       shouldContinue: false,
-      reply: { text: "⚙️ Usage: /fast status|on|off" },
+      reply: {
+        text: isChineseSurface
+          ? "[系统] 用法：/fast status|on|off"
+          : "⚙️ Usage: /fast status|on|off",
+      },
     };
   }
 
@@ -339,7 +394,11 @@ export const handleFastCommand: CommandHandler = async (params, allowTextCommand
 
   return {
     shouldContinue: false,
-    reply: { text: `⚙️ Fast mode ${nextMode ? "enabled" : "disabled"}.` },
+    reply: {
+      text: isChineseSurface
+        ? `[系统] 快速模式已${nextMode ? "开启" : "关闭"}。`
+        : `⚙️ Fast mode ${nextMode ? "enabled" : "disabled"}.`,
+    },
   };
 };
 

@@ -19,6 +19,7 @@ import {
 import { logVerbose } from "../../globals.js";
 import { clearCommandLane, getQueueSize } from "../../process/command-queue.js";
 import { normalizeMainKey } from "../../routing/session-key.js";
+import { INTERNAL_MESSAGE_CHANNEL, normalizeMessageChannel } from "../../utils/message-channel.js";
 import { isReasoningTagProvider } from "../../utils/provider-utils.js";
 import { hasControlCommand } from "../command-detection.js";
 import { buildInboundMediaNote } from "../media-note.js";
@@ -55,6 +56,7 @@ type AgentDefaults = NonNullable<OpenClawConfig["agents"]>["defaults"];
 type ExecOverrides = Pick<ExecToolDefaults, "host" | "security" | "ask" | "node">;
 
 function buildResetSessionNoticeText(params: {
+  surface?: string;
   provider: string;
   model: string;
   defaultProvider: string;
@@ -62,9 +64,16 @@ function buildResetSessionNoticeText(params: {
 }): string {
   const modelLabel = `${params.provider}/${params.model}`;
   const defaultLabel = `${params.defaultProvider}/${params.defaultModel}`;
+  const normalizedSurface = normalizeMessageChannel(params.surface);
+  const isChineseSurface =
+    normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
   return modelLabel === defaultLabel
-    ? `✅ New session started · model: ${modelLabel}`
-    : `✅ New session started · model: ${modelLabel} (default: ${defaultLabel})`;
+    ? isChineseSurface
+      ? `[系统] 已开始新会话 · 模型：${modelLabel}`
+      : `✅ New session started · model: ${modelLabel}`
+    : isChineseSurface
+      ? `[系统] 已开始新会话 · 模型：${modelLabel}（默认：${defaultLabel}）`
+      : `✅ New session started · model: ${modelLabel} (default: ${defaultLabel})`;
 }
 
 function resolveResetSessionNoticeRoute(params: {
@@ -109,6 +118,7 @@ async function sendResetSessionNotice(params: {
   await routeReply({
     payload: {
       text: buildResetSessionNoticeText({
+        surface: route.channel,
         provider: params.provider,
         model: params.model,
         defaultProvider: params.defaultProvider,

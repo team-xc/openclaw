@@ -8,8 +8,8 @@ import {
   type AbortCutoff,
 } from "./abort-cutoff.js";
 import {
-  formatAbortReplyText,
   isAbortTrigger,
+  resolveLocalizedAbortReplyText,
   resolveSessionEntryForKey,
   setAbortMemory,
   stopSubagentsForRequester,
@@ -140,7 +140,15 @@ export const handleStopCommand: CommandHandler = async (params, allowTextCommand
     requesterSessionKey: abortTarget.key ?? params.sessionKey,
   });
 
-  return { shouldContinue: false, reply: { text: formatAbortReplyText(stopped) } };
+  return {
+    shouldContinue: false,
+    reply: {
+      text: resolveLocalizedAbortReplyText({
+        surface: params.command.channel,
+        stoppedSubagents: stopped,
+      }),
+    },
+  };
 };
 
 export const handleAbortTrigger: CommandHandler = async (params, allowTextCommands) => {
@@ -171,5 +179,12 @@ export const handleAbortTrigger: CommandHandler = async (params, allowTextComman
       targetSessionKey: abortTarget.key,
     }),
   });
-  return { shouldContinue: false, reply: { text: "⚙️ Agent was aborted." } };
+  return {
+    shouldContinue: false,
+    reply: {
+      text: resolveLocalizedAbortReplyText({
+        surface: params.command.channel,
+      }),
+    },
+  };
 };

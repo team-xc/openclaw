@@ -60,7 +60,12 @@ export const handleCompactCommand: CommandHandler = async (params) => {
   if (!params.sessionEntry?.sessionId) {
     return {
       shouldContinue: false,
-      reply: { text: "⚙️ Compaction unavailable (missing session id)." },
+      reply: {
+        text:
+          params.command.channel === "telegram" || params.command.channel === "webchat"
+            ? "[系统] 无法压缩上下文（缺少 session id）。"
+            : "⚙️ Compaction unavailable (missing session id).",
+      },
     };
   }
   const sessionId = params.sessionEntry.sessionId;
@@ -140,5 +145,17 @@ export const handleCompactCommand: CommandHandler = async (params) => {
     ? `${compactLabel}: ${reason} • ${contextSummary}`
     : `${compactLabel} • ${contextSummary}`;
   enqueueSystemEvent(line, { sessionKey: params.sessionKey });
-  return { shouldContinue: false, reply: { text: `⚙️ ${line}` } };
+  const lineZh = line
+    .replace(/^Compacted/, "已压缩")
+    .replace(/^Compaction skipped/, "已跳过压缩")
+    .replace(/^Compaction failed/, "压缩失败");
+  return {
+    shouldContinue: false,
+    reply: {
+      text:
+        params.command.channel === "telegram" || params.command.channel === "webchat"
+          ? `[系统] ${lineZh}`
+          : `⚙️ ${line}`,
+    },
+  };
 };

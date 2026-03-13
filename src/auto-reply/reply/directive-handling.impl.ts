@@ -11,6 +11,7 @@ import type { ExecAsk, ExecHost, ExecSecurity } from "../../infra/exec-approvals
 import { enqueueSystemEvent } from "../../infra/system-events.js";
 import { applyVerboseOverride } from "../../sessions/level-overrides.js";
 import { applyModelOverrideToSessionEntry } from "../../sessions/model-overrides.js";
+import { INTERNAL_MESSAGE_CHANNEL, normalizeMessageChannel } from "../../utils/message-channel.js";
 import { formatThinkingLevels, formatXHighModelHint, supportsXHighThinking } from "../thinking.js";
 import type { ReplyPayload } from "../types.js";
 import {
@@ -24,7 +25,6 @@ import {
   formatElevatedRuntimeHint,
   formatElevatedUnavailableText,
   enqueueModeSwitchEvents,
-  withOptions,
 } from "./directive-handling.shared.js";
 import type { ElevatedLevel, ReasoningLevel, ThinkLevel } from "./directives.js";
 
@@ -94,6 +94,9 @@ export async function handleDirectiveOnly(
     sessionKey: params.sessionKey,
   }).sandboxed;
   const shouldHintDirectRuntime = directives.hasElevatedDirective && !runtimeIsSandboxed;
+  const normalizedSurface = normalizeMessageChannel(params.surface);
+  const isChineseSurface =
+    normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
 
   const modelInfo = await maybeHandleModelDirectiveInfo({
     directives,
@@ -148,25 +151,30 @@ export async function handleDirectiveOnly(
     if (!directives.rawThinkLevel) {
       const level = currentThinkLevel ?? "off";
       return {
-        text: withOptions(
-          `Current thinking level: ${level}.`,
-          formatThinkingLevels(resolvedProvider, resolvedModel),
-        ),
+        text: isChineseSurface
+          ? `[系统] 当前思考等级：${level}。\n可选项：${formatThinkingLevels(resolvedProvider, resolvedModel)}。`
+          : `Current thinking level: ${level}.\nOptions: ${formatThinkingLevels(resolvedProvider, resolvedModel)}.`,
       };
     }
     return {
-      text: `Unrecognized thinking level "${directives.rawThinkLevel}". Valid levels: ${formatThinkingLevels(resolvedProvider, resolvedModel)}.`,
+      text: isChineseSurface
+        ? `[系统] 无法识别思考等级“${directives.rawThinkLevel}”。可用等级：${formatThinkingLevels(resolvedProvider, resolvedModel)}。`
+        : `Unrecognized thinking level "${directives.rawThinkLevel}". Valid levels: ${formatThinkingLevels(resolvedProvider, resolvedModel)}.`,
     };
   }
   if (directives.hasVerboseDirective && !directives.verboseLevel) {
     if (!directives.rawVerboseLevel) {
       const level = currentVerboseLevel ?? "off";
       return {
-        text: withOptions(`Current verbose level: ${level}.`, "on, full, off"),
+        text: isChineseSurface
+          ? `[系统] 当前详细级别：${level}。\n可选项：on, full, off。`
+          : `Current verbose level: ${level}.\nOptions: on, full, off.`,
       };
     }
     return {
-      text: `Unrecognized verbose level "${directives.rawVerboseLevel}". Valid levels: off, on, full.`,
+      text: isChineseSurface
+        ? `[系统] 无法识别详细级别“${directives.rawVerboseLevel}”。可用等级：off, on, full。`
+        : `Unrecognized verbose level "${directives.rawVerboseLevel}". Valid levels: off, on, full.`,
     };
   }
   if (directives.hasFastDirective && directives.fastMode === undefined) {
@@ -178,25 +186,36 @@ export async function handleDirectiveOnly(
             ? " (default)"
             : "";
       return {
-        text: withOptions(
-          `Current fast mode: ${effectiveFastMode ? "on" : "off"}${sourceSuffix}.`,
-          "on, off",
-        ),
+        text: isChineseSurface
+          ? `[系统] 当前快速模式：${effectiveFastMode ? "on" : "off"}${
+              effectiveFastModeSource === "config"
+                ? "（配置）"
+                : effectiveFastModeSource === "default"
+                  ? "（默认）"
+                  : ""
+            }。\n可选项：on, off。`
+          : `Current fast mode: ${effectiveFastMode ? "on" : "off"}${sourceSuffix}.\nOptions: on, off.`,
       };
     }
     return {
-      text: `Unrecognized fast mode "${directives.rawFastMode}". Valid levels: on, off.`,
+      text: isChineseSurface
+        ? `[系统] 无法识别快速模式“${directives.rawFastMode}”。可用值：on, off。`
+        : `Unrecognized fast mode "${directives.rawFastMode}". Valid levels: on, off.`,
     };
   }
   if (directives.hasReasoningDirective && !directives.reasoningLevel) {
     if (!directives.rawReasoningLevel) {
       const level = currentReasoningLevel ?? "off";
       return {
-        text: withOptions(`Current reasoning level: ${level}.`, "on, off, stream"),
+        text: isChineseSurface
+          ? `[系统] 当前推理可见性：${level}。\n可选项：on, off, stream。`
+          : `Current reasoning level: ${level}.\nOptions: on, off, stream.`,
       };
     }
     return {
-      text: `Unrecognized reasoning level "${directives.rawReasoningLevel}". Valid levels: on, off, stream.`,
+      text: isChineseSurface
+        ? `[系统] 无法识别推理可见性“${directives.rawReasoningLevel}”。可用值：on, off, stream。`
+        : `Unrecognized reasoning level "${directives.rawReasoningLevel}". Valid levels: on, off, stream.`,
     };
   }
   if (directives.hasElevatedDirective && !directives.elevatedLevel) {
@@ -212,16 +231,27 @@ export async function handleDirectiveOnly(
       }
       const level = currentElevatedLevel ?? "off";
       return {
-        text: [
-          withOptions(`Current elevated level: ${level}.`, "on, off, ask, full"),
-          shouldHintDirectRuntime ? formatElevatedRuntimeHint() : null,
-        ]
-          .filter(Boolean)
-          .join("\n"),
+        text: isChineseSurface
+          ? [
+              `[系统] 当前提权级别：${level}。`,
+              "可选项：on, off, ask, full。",
+              shouldHintDirectRuntime ? "当前为 direct 运行时；sandbox 不适用。" : null,
+            ]
+              .filter(Boolean)
+              .join("\n")
+          : [
+              `Current elevated level: ${level}.`,
+              "Options: on, off, ask, full.",
+              shouldHintDirectRuntime ? formatElevatedRuntimeHint() : null,
+            ]
+              .filter(Boolean)
+              .join("\n"),
       };
     }
     return {
-      text: `Unrecognized elevated level "${directives.rawElevatedLevel}". Valid levels: off, on, ask, full.`,
+      text: isChineseSurface
+        ? `[系统] 无法识别提权级别“${directives.rawElevatedLevel}”。可用值：off, on, ask, full。`
+        : `Unrecognized elevated level "${directives.rawElevatedLevel}". Valid levels: off, on, ask, full.`,
     };
   }
   if (directives.hasElevatedDirective && (!elevatedEnabled || !elevatedAllowed)) {
@@ -262,10 +292,9 @@ export async function handleDirectiveOnly(
       });
       const nodeLabel = execDefaults.node ? `node=${execDefaults.node}` : "node=(unset)";
       return {
-        text: withOptions(
-          `Current exec defaults: host=${execDefaults.host}, security=${execDefaults.security}, ask=${execDefaults.ask}, ${nodeLabel}.`,
-          "host=sandbox|gateway|node, security=deny|allowlist|full, ask=off|on-miss|always, node=<id>",
-        ),
+        text: isChineseSurface
+          ? `[系统] 当前执行默认值：host=${execDefaults.host}，security=${execDefaults.security}，ask=${execDefaults.ask}，${nodeLabel}。\n可选项：host=sandbox|gateway|node, security=deny|allowlist|full, ask=off|on-miss|always, node=<id>。`
+          : `Current exec defaults: host=${execDefaults.host}, security=${execDefaults.security}, ask=${execDefaults.ask}, ${nodeLabel}.\nOptions: host=sandbox|gateway|node, security=deny|allowlist|full, ask=off|on-miss|always, node=<id>.`,
       };
     }
   }
@@ -413,45 +442,73 @@ export async function handleDirectiveOnly(
   if (directives.hasThinkDirective && directives.thinkLevel) {
     parts.push(
       directives.thinkLevel === "off"
-        ? "Thinking disabled."
-        : `Thinking level set to ${directives.thinkLevel}.`,
+        ? isChineseSurface
+          ? "已关闭思考模式。"
+          : "Thinking disabled."
+        : isChineseSurface
+          ? `已将思考等级设为 ${directives.thinkLevel}。`
+          : `Thinking level set to ${directives.thinkLevel}.`,
     );
   }
   if (directives.hasFastDirective && directives.fastMode !== undefined) {
     parts.push(
       directives.fastMode
-        ? formatDirectiveAck("Fast mode enabled.")
-        : formatDirectiveAck("Fast mode disabled."),
+        ? isChineseSurface
+          ? "快速模式已开启。"
+          : formatDirectiveAck("Fast mode enabled.")
+        : isChineseSurface
+          ? "快速模式已关闭。"
+          : formatDirectiveAck("Fast mode disabled."),
     );
   }
   if (directives.hasVerboseDirective && directives.verboseLevel) {
     parts.push(
       directives.verboseLevel === "off"
-        ? formatDirectiveAck("Verbose logging disabled.")
+        ? isChineseSurface
+          ? "详细日志已关闭。"
+          : formatDirectiveAck("Verbose logging disabled.")
         : directives.verboseLevel === "full"
-          ? formatDirectiveAck("Verbose logging set to full.")
-          : formatDirectiveAck("Verbose logging enabled."),
+          ? isChineseSurface
+            ? "详细日志已设为 full。"
+            : formatDirectiveAck("Verbose logging set to full.")
+          : isChineseSurface
+            ? "详细日志已开启。"
+            : formatDirectiveAck("Verbose logging enabled."),
     );
   }
   if (directives.hasReasoningDirective && directives.reasoningLevel) {
     parts.push(
       directives.reasoningLevel === "off"
-        ? formatDirectiveAck("Reasoning visibility disabled.")
+        ? isChineseSurface
+          ? "推理可见性已关闭。"
+          : formatDirectiveAck("Reasoning visibility disabled.")
         : directives.reasoningLevel === "stream"
-          ? formatDirectiveAck("Reasoning stream enabled (Telegram only).")
-          : formatDirectiveAck("Reasoning visibility enabled."),
+          ? isChineseSurface
+            ? "推理流已开启（仅 Telegram）。"
+            : formatDirectiveAck("Reasoning stream enabled (Telegram only).")
+          : isChineseSurface
+            ? "推理可见性已开启。"
+            : formatDirectiveAck("Reasoning visibility enabled."),
     );
   }
   if (directives.hasElevatedDirective && directives.elevatedLevel) {
     parts.push(
       directives.elevatedLevel === "off"
-        ? formatDirectiveAck("Elevated mode disabled.")
+        ? isChineseSurface
+          ? "提权模式已关闭。"
+          : formatDirectiveAck("Elevated mode disabled.")
         : directives.elevatedLevel === "full"
-          ? formatDirectiveAck("Elevated mode set to full (auto-approve).")
-          : formatDirectiveAck("Elevated mode set to ask (approvals may still apply)."),
+          ? isChineseSurface
+            ? "提权模式已设为 full（自动批准）。"
+            : formatDirectiveAck("Elevated mode set to full (auto-approve).")
+          : isChineseSurface
+            ? "提权模式已设为 ask（仍可能需要批准）。"
+            : formatDirectiveAck("Elevated mode set to ask (approvals may still apply)."),
     );
     if (shouldHintDirectRuntime) {
-      parts.push(formatElevatedRuntimeHint());
+      parts.push(
+        isChineseSurface ? "当前为 direct 运行时；sandbox 不适用。" : formatElevatedRuntimeHint(),
+      );
     }
   }
   if (directives.hasExecDirective && directives.hasExecOptions) {
@@ -469,12 +526,18 @@ export async function handleDirectiveOnly(
       execParts.push(`node=${directives.execNode}`);
     }
     if (execParts.length > 0) {
-      parts.push(formatDirectiveAck(`Exec defaults set (${execParts.join(", ")}).`));
+      parts.push(
+        isChineseSurface
+          ? `执行默认值已设置（${execParts.join(", ")}）。`
+          : formatDirectiveAck(`Exec defaults set (${execParts.join(", ")}).`),
+      );
     }
   }
   if (shouldDowngradeXHigh) {
     parts.push(
-      `Thinking level set to high (xhigh not supported for ${resolvedProvider}/${resolvedModel}).`,
+      isChineseSurface
+        ? `已将思考等级设为 high（${resolvedProvider}/${resolvedModel} 不支持 xhigh）。`
+        : `Thinking level set to high (xhigh not supported for ${resolvedProvider}/${resolvedModel}).`,
     );
   }
   if (modelSelection) {
@@ -482,36 +545,72 @@ export async function handleDirectiveOnly(
     const labelWithAlias = modelSelection.alias ? `${modelSelection.alias} (${label})` : label;
     parts.push(
       modelSelection.isDefault
-        ? `Model reset to default (${labelWithAlias}).`
-        : `Model set to ${labelWithAlias}.`,
+        ? isChineseSurface
+          ? `模型已重置为默认值（${labelWithAlias}）。`
+          : `Model reset to default (${labelWithAlias}).`
+        : isChineseSurface
+          ? `模型已切换为 ${labelWithAlias}。`
+          : `Model set to ${labelWithAlias}.`,
     );
     if (profileOverride) {
-      parts.push(`Auth profile set to ${profileOverride}.`);
+      parts.push(
+        isChineseSurface
+          ? `认证配置已切换为 ${profileOverride}。`
+          : `Auth profile set to ${profileOverride}.`,
+      );
     }
   }
   if (directives.hasQueueDirective && directives.queueMode) {
-    parts.push(formatDirectiveAck(`Queue mode set to ${directives.queueMode}.`));
+    parts.push(
+      isChineseSurface
+        ? `队列模式已设为 ${directives.queueMode}。`
+        : formatDirectiveAck(`Queue mode set to ${directives.queueMode}.`),
+    );
   } else if (directives.hasQueueDirective && directives.queueReset) {
-    parts.push(formatDirectiveAck("Queue mode reset to default."));
+    parts.push(
+      isChineseSurface
+        ? "队列模式已重置为默认值。"
+        : formatDirectiveAck("Queue mode reset to default."),
+    );
   }
   if (directives.hasQueueDirective && typeof directives.debounceMs === "number") {
-    parts.push(formatDirectiveAck(`Queue debounce set to ${directives.debounceMs}ms.`));
+    parts.push(
+      isChineseSurface
+        ? `队列防抖已设为 ${directives.debounceMs}ms。`
+        : formatDirectiveAck(`Queue debounce set to ${directives.debounceMs}ms.`),
+    );
   }
   if (directives.hasQueueDirective && typeof directives.cap === "number") {
-    parts.push(formatDirectiveAck(`Queue cap set to ${directives.cap}.`));
+    parts.push(
+      isChineseSurface
+        ? `队列上限已设为 ${directives.cap}。`
+        : formatDirectiveAck(`Queue cap set to ${directives.cap}.`),
+    );
   }
   if (directives.hasQueueDirective && directives.dropPolicy) {
-    parts.push(formatDirectiveAck(`Queue drop set to ${directives.dropPolicy}.`));
+    parts.push(
+      isChineseSurface
+        ? `队列丢弃策略已设为 ${directives.dropPolicy}。`
+        : formatDirectiveAck(`Queue drop set to ${directives.dropPolicy}.`),
+    );
   }
   if (fastModeChanged) {
-    enqueueSystemEvent(`Fast mode ${sessionEntry.fastMode ? "enabled" : "disabled"}.`, {
-      sessionKey,
-      contextKey: `fast:${sessionEntry.fastMode ? "on" : "off"}`,
-    });
+    enqueueSystemEvent(
+      isChineseSurface
+        ? `[系统] 快速模式已${sessionEntry.fastMode ? "开启" : "关闭"}。`
+        : `Fast mode ${sessionEntry.fastMode ? "enabled" : "disabled"}.`,
+      {
+        sessionKey,
+        contextKey: `fast:${sessionEntry.fastMode ? "on" : "off"}`,
+      },
+    );
   }
   const ack = parts.join(" ").trim();
   if (!ack && directives.hasStatusDirective) {
     return undefined;
   }
-  return { text: ack || "OK." };
+  if (!ack) {
+    return { text: "OK." };
+  }
+  return { text: isChineseSurface ? `[系统] ${ack}` : ack };
 }

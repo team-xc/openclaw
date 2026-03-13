@@ -19,6 +19,7 @@ import {
 } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
 import { parseAgentSessionKey } from "../../routing/session-key.js";
+import { INTERNAL_MESSAGE_CHANNEL, normalizeMessageChannel } from "../../utils/message-channel.js";
 import { resolveCommandAuthorization } from "../command-auth.js";
 import { normalizeCommandBody, type CommandNormalizeOptions } from "../commands-registry.js";
 import type { FinalizedMsgContext, MsgContext } from "../templating.js";
@@ -168,6 +169,22 @@ export function formatAbortReplyText(stoppedSubagents?: number): string {
   }
   const label = stoppedSubagents === 1 ? "sub-agent" : "sub-agents";
   return `⚙️ Agent was aborted. Stopped ${stoppedSubagents} ${label}.`;
+}
+
+export function resolveLocalizedAbortReplyText(params: {
+  surface?: string | null;
+  stoppedSubagents?: number;
+}): string {
+  const normalizedSurface = normalizeMessageChannel(params.surface);
+  const isChineseSurface =
+    normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
+  if (typeof params.stoppedSubagents !== "number" || params.stoppedSubagents <= 0) {
+    return isChineseSurface ? "[系统] 已中断当前任务。" : "⚙️ Agent was aborted.";
+  }
+  const label = params.stoppedSubagents === 1 ? "sub-agent" : "sub-agents";
+  return isChineseSurface
+    ? `[系统] 已中断当前任务，并停止 ${params.stoppedSubagents} 个子代理。`
+    : `⚙️ Agent was aborted. Stopped ${params.stoppedSubagents} ${label}.`;
 }
 
 export function resolveSessionEntryForKey(

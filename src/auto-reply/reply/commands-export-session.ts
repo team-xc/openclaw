@@ -10,6 +10,7 @@ import {
 } from "../../config/sessions/paths.js";
 import { loadSessionStore } from "../../config/sessions/store.js";
 import type { SessionEntry } from "../../config/sessions/types.js";
+import { INTERNAL_MESSAGE_CHANNEL, normalizeMessageChannel } from "../../utils/message-channel.js";
 import type { ReplyPayload } from "../types.js";
 import { resolveCommandsSystemPromptBundle } from "./commands-system-prompt.js";
 import type { HandleCommandsParams } from "./commands-types.js";
@@ -189,15 +190,27 @@ export async function buildExportSessionReply(params: HandleCommandsParams): Pro
 
   const relativePath = path.relative(params.workspaceDir, outputPath);
   const displayPath = relativePath.startsWith("..") ? outputPath : relativePath;
+  const normalizedSurface = normalizeMessageChannel(params.command.channel);
+  const isChineseSurface =
+    normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
 
   return {
-    text: [
-      "✅ Session exported!",
-      "",
-      `📄 File: ${displayPath}`,
-      `📊 Entries: ${entries.length}`,
-      `🧠 System prompt: ${systemPrompt.length.toLocaleString()} chars`,
-      `🔧 Tools: ${tools.length}`,
-    ].join("\n"),
+    text: isChineseSurface
+      ? [
+          "[系统] 会话已导出！",
+          "",
+          `文件：${displayPath}`,
+          `条目数：${entries.length}`,
+          `系统提示词：${systemPrompt.length.toLocaleString()} 字符`,
+          `工具数：${tools.length}`,
+        ].join("\n")
+      : [
+          "✅ Session exported!",
+          "",
+          `📄 File: ${displayPath}`,
+          `📊 Entries: ${entries.length}`,
+          `🧠 System prompt: ${systemPrompt.length.toLocaleString()} chars`,
+          `🔧 Tools: ${tools.length}`,
+        ].join("\n"),
   };
 }

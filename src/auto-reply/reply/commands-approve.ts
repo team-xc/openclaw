@@ -98,7 +98,12 @@ export const handleApproveCommand: CommandHandler = async (params, allowTextComm
     ) {
       return {
         shouldContinue: false,
-        reply: { text: "❌ Telegram exec approvals are not enabled for this bot account." },
+        reply: {
+          text:
+            params.command.channel === "telegram"
+              ? "[系统] 当前 Telegram 机器人账号未启用执行审批。"
+              : "❌ Telegram exec approvals are not enabled for this bot account.",
+        },
       };
     }
     if (
@@ -110,7 +115,12 @@ export const handleApproveCommand: CommandHandler = async (params, allowTextComm
     ) {
       return {
         shouldContinue: false,
-        reply: { text: "❌ You are not authorized to approve exec requests on Telegram." },
+        reply: {
+          text:
+            params.command.channel === "telegram"
+              ? "[系统] 你无权在 Telegram 上审批执行请求。"
+              : "❌ You are not authorized to approve exec requests on Telegram.",
+        },
       };
     }
   }
@@ -137,13 +147,21 @@ export const handleApproveCommand: CommandHandler = async (params, allowTextComm
     return {
       shouldContinue: false,
       reply: {
-        text: `❌ Failed to submit approval: ${String(err)}`,
+        text:
+          params.command.channel === "telegram"
+            ? `[系统] 提交审批失败：${String(err)}`
+            : `❌ Failed to submit approval: ${String(err)}`,
       },
     };
   }
 
   return {
     shouldContinue: false,
-    reply: { text: `✅ Exec approval ${parsed.decision} submitted for ${parsed.id}.` },
+    reply: {
+      text:
+        params.command.channel === "telegram"
+          ? `[系统] 已为 ${parsed.id} 提交执行审批：${parsed.decision}。`
+          : `✅ Exec approval ${parsed.decision} submitted for ${parsed.id}.`,
+    },
   };
 };
