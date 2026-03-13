@@ -25,6 +25,7 @@ export type SessionsProps = {
     patch: {
       label?: string | null;
       thinkingLevel?: string | null;
+      fastMode?: boolean | null;
       verboseLevel?: string | null;
       reasoningLevel?: string | null;
     },
@@ -39,6 +40,11 @@ const VERBOSE_LEVELS = [
   { value: "off", label: "off (explicit)" },
   { value: "on", label: "on" },
   { value: "full", label: "full" },
+] as const;
+const FAST_LEVELS = [
+  { value: "", label: "inherit" },
+  { value: "on", label: "on" },
+  { value: "off", label: "off" },
 ] as const;
 const REASONING_LEVELS = ["", "off", "on", "stream"] as const;
 
@@ -196,6 +202,7 @@ export function renderSessions(props: SessionsProps) {
           <div>Updated</div>
           <div>Tokens</div>
           <div>Thinking</div>
+          <div>Fast</div>
           <div>Verbose</div>
           <div>Reasoning</div>
           <div>Actions</div>
@@ -226,6 +233,8 @@ function renderRow(
   const isBinaryThinking = isBinaryThinkingProvider(row.modelProvider);
   const thinking = resolveThinkLevelDisplay(rawThinking, isBinaryThinking);
   const thinkLevels = withCurrentOption(resolveThinkLevelOptions(row.modelProvider), thinking);
+  const fastMode = row.fastMode === true ? "on" : row.fastMode === false ? "off" : "";
+  const fastLevels = withCurrentLabeledOption(FAST_LEVELS, fastMode);
   const verbose = row.verboseLevel ?? "";
   const verboseLevels = withCurrentLabeledOption(VERBOSE_LEVELS, verbose);
   const reasoning = row.reasoningLevel ?? "";
@@ -275,6 +284,22 @@ function renderRow(
             (level) =>
               html`<option value=${level} ?selected=${thinking === level}>
                 ${level || "inherit"}
+              </option>`,
+          )}
+        </select>
+      </div>
+      <div>
+        <select
+          ?disabled=${disabled}
+          @change=${(e: Event) => {
+            const value = (e.target as HTMLSelectElement).value;
+            onPatch(row.key, { fastMode: value === "" ? null : value === "on" });
+          }}
+        >
+          ${fastLevels.map(
+            (level) =>
+              html`<option value=${level.value} ?selected=${fastMode === level.value}>
+                ${level.label}
               </option>`,
           )}
         </select>

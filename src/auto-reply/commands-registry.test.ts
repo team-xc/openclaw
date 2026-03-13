@@ -198,6 +198,17 @@ describe("commands registry", () => {
     ]);
   });
 
+  it("registers fast mode as a first-class options command", () => {
+    const fast = listChatCommands().find((command) => command.key === "fast");
+    expect(fast).toMatchObject({
+      nativeName: "fast",
+      textAliases: ["/fast"],
+      category: "options",
+    });
+    const modeArg = fast?.args?.find((arg) => arg.name === "mode");
+    expect(modeArg?.choices).toEqual(["status", "on", "off"]);
+  });
+
   it("detects known text commands", () => {
     const detection = getCommandDetection();
     expect(detection.exact.has("/commands")).toBe(true);
@@ -228,7 +239,7 @@ describe("commands registry", () => {
     expect(
       shouldHandleTextCommands({
         cfg,
-        surface: "discord",
+        surface: "telegram",
         commandSource: "text",
       }),
     ).toBe(false);
@@ -242,7 +253,7 @@ describe("commands registry", () => {
     expect(
       shouldHandleTextCommands({
         cfg,
-        surface: "discord",
+        surface: "telegram",
         commandSource: "native",
       }),
     ).toBe(true);
