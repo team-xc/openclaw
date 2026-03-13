@@ -24,6 +24,7 @@ import {
   HexColorSchema,
   MarkdownConfigSchema,
   MSTeamsReplyStyleSchema,
+  NativeCommandsSettingSchema,
   ProviderCommandsSchema,
   SecretRefSchema,
   SecretInputSchema,
@@ -50,6 +51,15 @@ const DiscordIdListSchema = z.array(DiscordIdSchema);
 
 const TelegramInlineButtonsScopeSchema = z.enum(["off", "dm", "group", "all", "allowlist"]);
 const TelegramIdListSchema = z.array(z.union([z.string(), z.number()]));
+const TelegramCommandMenuModeSchema = z.enum(["merge", "custom-only"]);
+const TelegramProviderCommandsSchema = z
+  .object({
+    native: NativeCommandsSettingSchema.optional(),
+    nativeSkills: NativeCommandsSettingSchema.optional(),
+    menuMode: TelegramCommandMenuModeSchema.optional(),
+  })
+  .strict()
+  .optional();
 
 const TelegramCapabilitiesSchema = z.union([
   z.array(z.string()),
@@ -166,7 +176,7 @@ export const TelegramAccountSchemaBase = z
       .optional(),
     markdown: MarkdownConfigSchema,
     enabled: z.boolean().optional(),
-    commands: ProviderCommandsSchema,
+    commands: TelegramProviderCommandsSchema,
     customCommands: z.array(TelegramCustomCommandSchema).optional(),
     configWrites: z.boolean().optional(),
     dmPolicy: DmPolicySchema.optional().default("pairing"),

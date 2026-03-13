@@ -38,6 +38,12 @@ export type TelegramNetworkConfig = {
 
 export type TelegramInlineButtonsScope = "off" | "dm" | "group" | "all" | "allowlist";
 export type TelegramStreamingMode = "off" | "partial" | "block" | "progress";
+export type TelegramCommandMenuMode = "merge" | "custom-only";
+
+export type TelegramCommandsConfig = ProviderCommandsConfig & {
+  /** Controls which commands are shown in the Telegram bot menu. */
+  menuMode?: TelegramCommandMenuMode;
+};
 export type TelegramExecApprovalTarget = "dm" | "channel" | "both";
 
 export type TelegramExecApprovalConfig = {
@@ -76,9 +82,13 @@ export type TelegramAccountConfig = {
   execApprovals?: TelegramExecApprovalConfig;
   /** Markdown formatting overrides (tables). */
   markdown?: MarkdownConfig;
-  /** Override native command registration for Telegram (bool or "auto"). */
-  commands?: ProviderCommandsConfig;
-  /** Custom commands to register in Telegram's command menu (merged with native). */
+  /** Override native command registration for Telegram and control the Telegram menu surface. */
+  commands?: TelegramCommandsConfig;
+  /**
+   * Custom Telegram menu commands.
+   * In the default merge mode, matching native names override the Telegram menu description.
+   * In custom-only mode, this list becomes the full Telegram command menu.
+   */
   customCommands?: TelegramCustomCommand[];
   /** Allow channel-initiated config writes (default: true). */
   configWrites?: boolean;

@@ -1446,6 +1446,8 @@ export const FIELD_HELP: Record<string, string> = {
   "channels.telegram.commands.native": 'Override native commands for Telegram (bool or "auto").',
   "channels.telegram.commands.nativeSkills":
     'Override native skill commands for Telegram (bool or "auto").',
+  "channels.telegram.commands.menuMode":
+    'Controls which commands appear in the Telegram bot menu: "merge" (default) merges native, plugin, and custom menu entries; "custom-only" shows only channels.telegram.customCommands.',
   "channels.slack.commands.native": 'Override native commands for Slack (bool or "auto").',
   "channels.slack.commands.nativeSkills":
     'Override native skill commands for Slack (bool or "auto").',
@@ -1456,7 +1458,7 @@ export const FIELD_HELP: Record<string, string> = {
   "channels.slack.streamMode":
     "Legacy Slack preview mode alias (replace | status_final | append); auto-migrated to channels.slack.streaming.",
   "channels.telegram.customCommands":
-    "Additional Telegram bot menu commands (merged with native; conflicts ignored).",
+    'Additional Telegram bot menu commands. In the default "merge" mode, names matching active native commands override the Telegram menu description while other names are appended as standalone menu entries. In "custom-only" mode, this list becomes the full Telegram bot menu.',
   "messages.suppressToolErrors":
     "When true, suppress ⚠️ tool-error warnings from being shown to the user. The agent already sees errors in context and can retry. Default: false.",
   "messages.ackReaction": "Emoji reaction used to acknowledge inbound messages (empty disables).",

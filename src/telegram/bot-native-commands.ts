@@ -76,6 +76,11 @@ const EMPTY_RESPONSE_FALLBACK = "No response generated. Please try again.";
 
 type TelegramNativeCommandContext = Context & { match?: string };
 
+type TelegramMenuCommandEntry = {
+  command: string;
+  description: string;
+};
+
 type TelegramCommandAuthResult = {
   chatId: number;
   isGroup: boolean;
@@ -375,31 +380,90 @@ export const registerTelegramNativeCommands = ({
     nativeEnabled && nativeSkillsEnabled && boundRoute
       ? listSkillCommandsForAgents({ cfg, agentIds: [boundRoute.agentId] })
       : [];
+  const menuMode = telegramCfg.commands?.menuMode ?? "merge";
+  const textCommandsEnabled = cfg.commands?.text !== false;
   const nativeCommands = nativeEnabled
     ? listNativeCommandSpecsForConfig(cfg, {
         skillCommands,
         provider: "telegram",
       })
     : [];
-  const reservedCommands = new Set(
-    listNativeCommandSpecs().map((command) => normalizeTelegramCommandName(command.name)),
+  const knownNativeCommandNames = new Set(
+    listNativeCommandSpecs({
+      skillCommands,
+      provider: "telegram",
+    }).map((command) => normalizeTelegramCommandName(command.name)),
   );
-  for (const command of skillCommands) {
-    reservedCommands.add(command.name.toLowerCase());
-  }
   const customResolution = resolveTelegramCustomCommands({
     commands: telegramCfg.customCommands,
-    reservedCommands,
+    checkReserved: false,
   });
   for (const issue of customResolution.issues) {
     runtime.error?.(danger(issue.message));
   }
-  const customCommands = customResolution.commands;
+  const nativeMenuCommands = nativeCommands
+    .map((command) => {
+      const normalized = normalizeTelegramCommandName(command.name);
+      if (!TELEGRAM_COMMAND_NAME_PATTERN.test(normalized)) {
+        runtime.error?.(
+          danger(
+            `Native command "${command.name}" is invalid for Telegram (resolved to "${normalized}"). Skipping.`,
+          ),
+        );
+        return null;
+      }
+      return {
+        command: normalized,
+        description: command.description,
+      } satisfies TelegramMenuCommandEntry;
+    })
+    .filter((cmd): cmd is TelegramMenuCommandEntry => cmd !== null);
+  const activeNativeCommandNames = new Set(
+    nativeMenuCommands.map((command) => command.command.toLowerCase()),
+  );
+  const nativeDescriptionOverrides = new Map<string, string>();
+  const customMenuCommands: TelegramMenuCommandEntry[] = [];
+  for (const command of customResolution.commands) {
+    const normalized = command.command.toLowerCase();
+    const matchesActiveNative = activeNativeCommandNames.has(normalized);
+    const matchesKnownNative = knownNativeCommandNames.has(normalized);
+    if (menuMode === "merge" && matchesActiveNative) {
+      nativeDescriptionOverrides.set(normalized, command.description);
+      continue;
+    }
+    if (menuMode === "merge" && matchesKnownNative) {
+      runtime.error?.(
+        danger(
+          `Telegram custom command "/${command.command}" matches a native command, but that native command is not currently enabled for Telegram. Rename it or enable native commands instead.`,
+        ),
+      );
+      continue;
+    }
+    if (
+      menuMode === "custom-only" &&
+      matchesKnownNative &&
+      !matchesActiveNative &&
+      !textCommandsEnabled
+    ) {
+      runtime.error?.(
+        danger(
+          `Telegram custom command "/${command.command}" matches a native command, but neither Telegram native commands nor text commands are enabled. Enable channels.telegram.commands.native, enable commands.text, or rename the command.`,
+        ),
+      );
+      continue;
+    }
+    customMenuCommands.push(command);
+  }
+  const nativeMenuCommandsWithOverrides = nativeMenuCommands.map((command) => ({
+    ...command,
+    description:
+      nativeDescriptionOverrides.get(command.command.toLowerCase()) ?? command.description,
+  }));
   const pluginCommandSpecs = getPluginCommandSpecs("telegram");
   const existingCommands = new Set(
     [
-      ...nativeCommands.map((command) => normalizeTelegramCommandName(command.name)),
-      ...customCommands.map((command) => command.command),
+      ...nativeMenuCommandsWithOverrides.map((command) => command.command),
+      ...customMenuCommands.map((command) => command.command),
     ].map((command) => command.toLowerCase()),
   );
   const pluginCatalog = buildPluginTelegramMenuCommands({
@@ -409,36 +473,27 @@ export const registerTelegramNativeCommands = ({
   for (const issue of pluginCatalog.issues) {
     runtime.error?.(danger(issue));
   }
-  const allCommandsFull: Array<{ command: string; description: string }> = [
-    ...nativeCommands
-      .map((command) => {
-        const normalized = normalizeTelegramCommandName(command.name);
-        if (!TELEGRAM_COMMAND_NAME_PATTERN.test(normalized)) {
-          runtime.error?.(
-            danger(
-              `Native command "${command.name}" is invalid for Telegram (resolved to "${normalized}"). Skipping.`,
-            ),
-          );
-          return null;
-        }
-        return {
-          command: normalized,
-          description: command.description,
-        };
-      })
-      .filter((cmd): cmd is { command: string; description: string } => cmd !== null),
-    ...(nativeEnabled ? pluginCatalog.commands : []),
-    ...customCommands,
-  ];
+  const allCommandsFull: Array<{ command: string; description: string }> =
+    menuMode === "custom-only"
+      ? [...customMenuCommands]
+      : [
+          ...nativeMenuCommandsWithOverrides,
+          ...(nativeEnabled ? pluginCatalog.commands : []),
+          ...customMenuCommands,
+        ];
   const { commandsToRegister, totalCommands, maxCommands, overflowCount } =
     buildCappedTelegramMenuCommands({
       allCommands: allCommandsFull,
     });
   if (overflowCount > 0) {
+    const overflowHint =
+      menuMode === "custom-only"
+        ? "Reduce channels.telegram.customCommands."
+        : "Use channels.telegram.commands.native: false to disable, or reduce plugin/skill/custom commands.";
     runtime.log?.(
       `Telegram limits bots to ${maxCommands} commands. ` +
         `${totalCommands} configured; registering first ${maxCommands}. ` +
-        `Use channels.telegram.commands.native: false to disable, or reduce plugin/skill/custom commands.`,
+        overflowHint,
     );
   }
   // Telegram only limits the setMyCommands payload (menu entries).

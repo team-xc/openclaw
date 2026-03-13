@@ -1,8 +1,12 @@
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { listNativeCommandSpecsForConfig } from "../auto-reply/commands-registry.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { STATE_DIR } from "../config/paths.js";
-import { TELEGRAM_COMMAND_NAME_PATTERN } from "../config/telegram-custom-commands.js";
+import {
+  normalizeTelegramCommandName,
+  TELEGRAM_COMMAND_NAME_PATTERN,
+} from "../config/telegram-custom-commands.js";
 import type { TelegramAccountConfig } from "../config/types.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { registerTelegramNativeCommands } from "./bot-native-commands.js";
@@ -173,6 +177,83 @@ describe("registerTelegramNativeCommands", () => {
     expect(registeredHandlers).not.toContain("export-session");
   });
 
+  it("overrides native menu descriptions in merge mode without changing native handler registration", async () => {
+    const setMyCommands = vi.fn().mockResolvedValue(undefined);
+    const command = vi.fn();
+    const errorSpy = vi.fn();
+
+    registerTelegramNativeCommands({
+      ...buildParams({}),
+      bot: {
+        api: {
+          setMyCommands,
+          sendMessage: vi.fn().mockResolvedValue(undefined),
+        },
+        command,
+      } as unknown as Parameters<typeof registerTelegramNativeCommands>[0]["bot"],
+      runtime: { error: errorSpy } as unknown as RuntimeEnv,
+      telegramCfg: {
+        commands: { menuMode: "merge" },
+        customCommands: [
+          { command: "status", description: "查看系统状态" },
+          { command: "custom_backup", description: "Git backup" },
+        ],
+      } as TelegramAccountConfig,
+    });
+
+    const registeredCommands = await waitForRegisteredCommands(setMyCommands);
+    const statusCommand = registeredCommands.find((entry) => entry.command === "status");
+    const nativeStatus = listNativeCommandSpecsForConfig({}, { provider: "telegram" }).find(
+      (entry) => normalizeTelegramCommandName(entry.name) === "status",
+    );
+
+    expect(statusCommand).toEqual({ command: "status", description: "查看系统状态" });
+    expect(nativeStatus).toBeDefined();
+    expect(statusCommand?.description).not.toBe(nativeStatus?.description);
+    expect(registeredCommands).toContainEqual({
+      command: "custom_backup",
+      description: "Git backup",
+    });
+    expect(registeredCommands.filter((entry) => entry.command === "status")).toHaveLength(1);
+    expect(command.mock.calls.filter(([name]) => name === "status")).toHaveLength(1);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it("registers only custom commands in custom-only mode while keeping native handlers", async () => {
+    const setMyCommands = vi.fn().mockResolvedValue(undefined);
+    const command = vi.fn();
+    const errorSpy = vi.fn();
+
+    registerTelegramNativeCommands({
+      ...buildParams({}),
+      bot: {
+        api: {
+          setMyCommands,
+          sendMessage: vi.fn().mockResolvedValue(undefined),
+        },
+        command,
+      } as unknown as Parameters<typeof registerTelegramNativeCommands>[0]["bot"],
+      runtime: { error: errorSpy } as unknown as RuntimeEnv,
+      telegramCfg: {
+        commands: { menuMode: "custom-only" },
+        customCommands: [
+          { command: "help", description: "查看帮助" },
+          { command: "custom_backup", description: "Git backup" },
+        ],
+      } as TelegramAccountConfig,
+    });
+
+    const registeredCommands = await waitForRegisteredCommands(setMyCommands);
+
+    expect(registeredCommands).toEqual([
+      { command: "help", description: "查看帮助" },
+      { command: "custom_backup", description: "Git backup" },
+    ]);
+    expect(command.mock.calls.filter(([name]) => name === "help")).toHaveLength(1);
+    expect(registeredCommands.some((entry) => entry.command === "status")).toBe(false);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
   it("registers only Telegram-safe command names across native, custom, and plugin sources", async () => {
     const setMyCommands = vi.fn().mockResolvedValue(undefined);
 
@@ -211,6 +292,128 @@ describe("registerTelegramNativeCommands", () => {
     expect(registeredCommands.some((entry) => entry.command === "plugin_status")).toBe(true);
     expect(registeredCommands.some((entry) => entry.command === "plugin-status")).toBe(false);
     expect(registeredCommands.some((entry) => entry.command === "custom-bad")).toBe(false);
+  });
+
+  it("keeps merge mode behavior for custom commands that shadow disabled native commands", async () => {
+    const setMyCommands = vi.fn().mockResolvedValue(undefined);
+    const errorSpy = vi.fn();
+
+    registerTelegramNativeCommands({
+      ...buildParams({
+        commands: { native: false },
+      }),
+      bot: {
+        api: {
+          setMyCommands,
+          sendMessage: vi.fn().mockResolvedValue(undefined),
+        },
+        command: vi.fn(),
+      } as unknown as Parameters<typeof registerTelegramNativeCommands>[0]["bot"],
+      runtime: { error: errorSpy } as unknown as RuntimeEnv,
+      telegramCfg: {
+        commands: { menuMode: "merge" },
+        customCommands: [
+          { command: "reset", description: "Reset session" },
+          { command: "custom_backup", description: "Git backup" },
+        ],
+      } as TelegramAccountConfig,
+      nativeEnabled: false,
+      nativeSkillsEnabled: false,
+    });
+
+    const registeredCommands = await waitForRegisteredCommands(setMyCommands);
+
+    expect(registeredCommands).toEqual([{ command: "custom_backup", description: "Git backup" }]);
+    expect(
+      errorSpy.mock.calls.some(([message]) =>
+        String(message).includes(
+          'Telegram custom command "/reset" matches a native command, but that native command is not currently enabled for Telegram.',
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps native-name custom commands in custom-only mode when text commands remain enabled", async () => {
+    const setMyCommands = vi.fn().mockResolvedValue(undefined);
+    const errorSpy = vi.fn();
+
+    registerTelegramNativeCommands({
+      ...buildParams({
+        commands: { native: false, text: true },
+      }),
+      bot: {
+        api: {
+          setMyCommands,
+          sendMessage: vi.fn().mockResolvedValue(undefined),
+        },
+        command: vi.fn(),
+      } as unknown as Parameters<typeof registerTelegramNativeCommands>[0]["bot"],
+      runtime: { error: errorSpy } as unknown as RuntimeEnv,
+      telegramCfg: {
+        commands: { menuMode: "custom-only" },
+        customCommands: [
+          { command: "stopnow", description: "中断任务" },
+          { command: "start", description: "开始使用小池助理" },
+          { command: "help", description: "查看帮助" },
+          { command: "status", description: "查看系统状态" },
+          { command: "quota", description: "查询 AI 额度" },
+          { command: "reset", description: "重置当前会话" },
+        ],
+      } as TelegramAccountConfig,
+      nativeEnabled: false,
+      nativeSkillsEnabled: false,
+    });
+
+    const registeredCommands = await waitForRegisteredCommands(setMyCommands);
+
+    expect(registeredCommands).toEqual([
+      { command: "stopnow", description: "中断任务" },
+      { command: "start", description: "开始使用小池助理" },
+      { command: "help", description: "查看帮助" },
+      { command: "status", description: "查看系统状态" },
+      { command: "quota", description: "查询 AI 额度" },
+      { command: "reset", description: "重置当前会话" },
+    ]);
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it("skips native-name custom commands in custom-only mode when no execution path is enabled", async () => {
+    const setMyCommands = vi.fn().mockResolvedValue(undefined);
+    const errorSpy = vi.fn();
+
+    registerTelegramNativeCommands({
+      ...buildParams({
+        commands: { native: false, text: false },
+      }),
+      bot: {
+        api: {
+          setMyCommands,
+          sendMessage: vi.fn().mockResolvedValue(undefined),
+        },
+        command: vi.fn(),
+      } as unknown as Parameters<typeof registerTelegramNativeCommands>[0]["bot"],
+      runtime: { error: errorSpy } as unknown as RuntimeEnv,
+      telegramCfg: {
+        commands: { menuMode: "custom-only" },
+        customCommands: [
+          { command: "reset", description: "Reset session" },
+          { command: "custom_backup", description: "Git backup" },
+        ],
+      } as TelegramAccountConfig,
+      nativeEnabled: false,
+      nativeSkillsEnabled: false,
+    });
+
+    const registeredCommands = await waitForRegisteredCommands(setMyCommands);
+
+    expect(registeredCommands).toEqual([{ command: "custom_backup", description: "Git backup" }]);
+    expect(
+      errorSpy.mock.calls.some(([message]) =>
+        String(message).includes(
+          'Telegram custom command "/reset" matches a native command, but neither Telegram native commands nor text commands are enabled.',
+        ),
+      ),
+    ).toBe(true);
   });
 
   it("passes agent-scoped media roots for plugin command replies with media", async () => {
