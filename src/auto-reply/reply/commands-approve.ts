@@ -4,7 +4,12 @@ import {
   isTelegramExecApprovalApprover,
   isTelegramExecApprovalClientEnabled,
 } from "../../telegram/exec-approvals.js";
-import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../../utils/message-channel.js";
+import {
+  GATEWAY_CLIENT_MODES,
+  GATEWAY_CLIENT_NAMES,
+  INTERNAL_MESSAGE_CHANNEL,
+  normalizeMessageChannel,
+} from "../../utils/message-channel.js";
 import { requireGatewayClientScopeForInternalChannel } from "./command-gates.js";
 import type { CommandHandler } from "./commands-types.js";
 
@@ -24,14 +29,27 @@ const DECISION_ALIASES: Record<string, "allow-once" | "allow-always" | "deny"> =
   block: "deny",
 };
 
+function localizeApprovalDecision(decision: "allow-once" | "allow-always" | "deny"): string {
+  switch (decision) {
+    case "allow-once":
+      return "单次允许";
+    case "allow-always":
+      return "始终允许";
+    case "deny":
+      return "拒绝";
+  }
+}
+
+type ApproveParseError = "wrong-bot" | "usage";
+
 type ParsedApproveCommand =
   | { ok: true; id: string; decision: "allow-once" | "allow-always" | "deny" }
-  | { ok: false; error: string };
+  | { ok: false; error: ApproveParseError };
 
 function parseApproveCommand(raw: string): ParsedApproveCommand | null {
   const trimmed = raw.trim();
   if (FOREIGN_COMMAND_MENTION_REGEX.test(trimmed)) {
-    return { ok: false, error: "❌ This /approve command targets a different Telegram bot." };
+    return { ok: false, error: "wrong-bot" };
   }
   const commandMatch = trimmed.match(COMMAND_REGEX);
   if (!commandMatch) {
@@ -39,11 +57,11 @@ function parseApproveCommand(raw: string): ParsedApproveCommand | null {
   }
   const rest = trimmed.slice(commandMatch[0].length).trim();
   if (!rest) {
-    return { ok: false, error: "Usage: /approve <id> allow-once|allow-always|deny" };
+    return { ok: false, error: "usage" };
   }
   const tokens = rest.split(/\s+/).filter(Boolean);
   if (tokens.length < 2) {
-    return { ok: false, error: "Usage: /approve <id> allow-once|allow-always|deny" };
+    return { ok: false, error: "usage" };
   }
 
   const first = tokens[0].toLowerCase();
@@ -63,7 +81,23 @@ function parseApproveCommand(raw: string): ParsedApproveCommand | null {
       id: tokens[0],
     };
   }
-  return { ok: false, error: "Usage: /approve <id> allow-once|allow-always|deny" };
+  return { ok: false, error: "usage" };
+}
+
+function formatApproveParseError(error: ApproveParseError, channel?: string | null): string {
+  const normalizedChannel = normalizeMessageChannel(channel);
+  const isChineseSurface =
+    normalizedChannel === "telegram" || normalizedChannel === INTERNAL_MESSAGE_CHANNEL;
+  if (!isChineseSurface) {
+    if (error === "wrong-bot") {
+      return "❌ This /approve command targets a different Telegram bot.";
+    }
+    return "Usage: /approve <id> allow-once|allow-always|deny";
+  }
+  if (error === "wrong-bot") {
+    return "🦞 这个 /approve 命令指向了另一个 Telegram 机器人";
+  }
+  return "🦞 用法 /approve <id> allow-once|allow-always|deny";
 }
 
 function buildResolvedByLabel(params: Parameters<CommandHandler>[0]): string {
@@ -89,7 +123,10 @@ export const handleApproveCommand: CommandHandler = async (params, allowTextComm
   }
 
   if (!parsed.ok) {
-    return { shouldContinue: false, reply: { text: parsed.error } };
+    return {
+      shouldContinue: false,
+      reply: { text: formatApproveParseError(parsed.error, params.command.channel) },
+    };
   }
 
   if (params.command.channel === "telegram") {
@@ -101,7 +138,7 @@ export const handleApproveCommand: CommandHandler = async (params, allowTextComm
         reply: {
           text:
             params.command.channel === "telegram"
-              ? "[系统] 当前 Telegram 机器人账号未启用执行审批。"
+              ? "🦞 当前 Telegram 机器人账号未启用执行审批"
               : "❌ Telegram exec approvals are not enabled for this bot account.",
         },
       };
@@ -118,7 +155,7 @@ export const handleApproveCommand: CommandHandler = async (params, allowTextComm
         reply: {
           text:
             params.command.channel === "telegram"
-              ? "[系统] 你无权在 Telegram 上审批执行请求。"
+              ? "🦞 你无权在 Telegram 上审批执行请求"
               : "❌ You are not authorized to approve exec requests on Telegram.",
         },
       };
@@ -149,7 +186,7 @@ export const handleApproveCommand: CommandHandler = async (params, allowTextComm
       reply: {
         text:
           params.command.channel === "telegram"
-            ? `[系统] 提交审批失败：${String(err)}`
+            ? `🦞 提交审批失败 ${String(err)}`
             : `❌ Failed to submit approval: ${String(err)}`,
       },
     };
@@ -160,7 +197,7 @@ export const handleApproveCommand: CommandHandler = async (params, allowTextComm
     reply: {
       text:
         params.command.channel === "telegram"
-          ? `[系统] 已为 ${parsed.id} 提交执行审批：${parsed.decision}。`
+          ? `🦞 已为 ${parsed.id} 提交执行审批 ${localizeApprovalDecision(parsed.decision)}`
           : `✅ Exec approval ${parsed.decision} submitted for ${parsed.id}.`,
     },
   };

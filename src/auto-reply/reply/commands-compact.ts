@@ -63,7 +63,7 @@ export const handleCompactCommand: CommandHandler = async (params) => {
       reply: {
         text:
           params.command.channel === "telegram" || params.command.channel === "webchat"
-            ? "[系统] 无法压缩上下文（缺少 session id）。"
+            ? "🦞 无法压缩上下文 缺少会话 ID"
             : "⚙️ Compaction unavailable (missing session id).",
       },
     };
@@ -123,6 +123,15 @@ export const handleCompactCommand: CommandHandler = async (params) => {
           : "Compacted"
       : "Compaction skipped"
     : "Compaction failed";
+  const compactLabelZh = result.ok
+    ? result.compacted
+      ? result.result?.tokensBefore != null && result.result?.tokensAfter != null
+        ? `已压缩 ${formatTokenCount(result.result.tokensBefore)} → ${formatTokenCount(result.result.tokensAfter)}`
+        : result.result?.tokensBefore
+          ? `已压缩 压缩前 ${formatTokenCount(result.result.tokensBefore)}`
+          : "已压缩"
+      : "已跳过压缩"
+    : "压缩失败";
   if (result.ok && result.compacted) {
     await incrementCompactionCount({
       sessionEntry: params.sessionEntry,
@@ -142,19 +151,18 @@ export const handleCompactCommand: CommandHandler = async (params) => {
   );
   const reason = result.reason?.trim();
   const line = reason
-    ? `${compactLabel}: ${reason} • ${contextSummary}`
-    : `${compactLabel} • ${contextSummary}`;
+    ? `${compactLabel} ${reason} ${contextSummary}`
+    : `${compactLabel} ${contextSummary}`;
   enqueueSystemEvent(line, { sessionKey: params.sessionKey });
-  const lineZh = line
-    .replace(/^Compacted/, "已压缩")
-    .replace(/^Compaction skipped/, "已跳过压缩")
-    .replace(/^Compaction failed/, "压缩失败");
+  const lineZh = reason
+    ? `${compactLabelZh} ${reason} ${contextSummary}`
+    : `${compactLabelZh} ${contextSummary}`;
   return {
     shouldContinue: false,
     reply: {
       text:
         params.command.channel === "telegram" || params.command.channel === "webchat"
-          ? `[系统] ${lineZh}`
+          ? `🦞 ${lineZh}`
           : `⚙️ ${line}`,
     },
   };

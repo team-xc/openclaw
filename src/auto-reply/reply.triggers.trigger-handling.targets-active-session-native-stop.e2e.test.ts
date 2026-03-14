@@ -385,7 +385,7 @@ describe("trigger handling", () => {
         );
 
         const text = Array.isArray(res) ? res[0]?.text : res?.text;
-        expect(text).toBe("⚙️ Agent was aborted.");
+        expect(text).toBe("🦞 已中断当前任务");
         expect(getAbortEmbeddedPiRunMock()).toHaveBeenCalledWith(targetSessionId);
         const store = loadSessionStore(storePath);
         expect(store[targetSessionKey]?.abortedLastRun).toBe(true);

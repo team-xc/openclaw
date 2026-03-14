@@ -42,7 +42,7 @@ describe("executeSlashCommand /kill", () => {
       "all",
     );
 
-    expect(result.content).toBe("[系统] 已中断 3 个子代理会话。");
+    expect(result.content).toBe("🦞 已中断 3 个子代理会话");
     expect(request).toHaveBeenNthCalledWith(1, "sessions.list", {});
     expect(request).toHaveBeenNthCalledWith(2, "chat.abort", {
       sessionKey: "agent:main:subagent:one",
@@ -79,7 +79,7 @@ describe("executeSlashCommand /kill", () => {
       "main",
     );
 
-    expect(result.content).toBe("[系统] 已中断匹配 `main` 的 2 个子代理会话。");
+    expect(result.content).toBe("🦞 已中断匹配 `main` 的 2 个子代理会话");
     expect(request).toHaveBeenNthCalledWith(1, "sessions.list", {});
     expect(request).toHaveBeenNthCalledWith(2, "chat.abort", {
       sessionKey: "agent:main:subagent:one",
@@ -115,7 +115,7 @@ describe("executeSlashCommand /kill", () => {
       "agent:main:subagent:sibling",
     );
 
-    expect(result.content).toBe("[系统] 未找到匹配 `agent:main:subagent:sibling` 的子代理会话。");
+    expect(result.content).toBe("🦞 未找到匹配 `agent:main:subagent:sibling` 的子代理会话");
     expect(request).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenNthCalledWith(1, "sessions.list", {});
   });
@@ -143,7 +143,7 @@ describe("executeSlashCommand /kill", () => {
       "all",
     );
 
-    expect(result.content).toBe("[系统] 没有可中断的活动任务。");
+    expect(result.content).toBe("🦞 没有可中断的活动任务");
     expect(request).toHaveBeenNthCalledWith(1, "sessions.list", {});
     expect(request).toHaveBeenNthCalledWith(2, "chat.abort", {
       sessionKey: "agent:main:subagent:one",
@@ -151,6 +151,29 @@ describe("executeSlashCommand /kill", () => {
     expect(request).toHaveBeenNthCalledWith(3, "chat.abort", {
       sessionKey: "agent:main:subagent:two",
     });
+  });
+
+  it("uses a Chinese fallback error when every abort request rejects without a message", async () => {
+    const request = vi.fn(async (method: string, _payload?: unknown) => {
+      if (method === "sessions.list") {
+        return {
+          sessions: [row("agent:main:subagent:one", { spawnedBy: "agent:main:main" })],
+        };
+      }
+      if (method === "chat.abort") {
+        throw undefined;
+      }
+      throw new Error(`unexpected method: ${method}`);
+    });
+
+    const result = await executeSlashCommand(
+      { request } as unknown as GatewayBrowserClient,
+      "agent:main:main",
+      "kill",
+      "all",
+    );
+
+    expect(result.content).toBe("🦞 中断任务失败 Error: 中断请求失败");
   });
 
   it("treats the legacy main session key as the default agent scope", async () => {
@@ -178,7 +201,7 @@ describe("executeSlashCommand /kill", () => {
       "all",
     );
 
-    expect(result.content).toBe("[系统] 已中断 2 个子代理会话。");
+    expect(result.content).toBe("🦞 已中断 2 个子代理会话");
     expect(request).toHaveBeenNthCalledWith(1, "sessions.list", {});
     expect(request).toHaveBeenNthCalledWith(2, "chat.abort", {
       sessionKey: "agent:main:subagent:one",
@@ -217,7 +240,7 @@ describe("executeSlashCommand /kill", () => {
       "all",
     );
 
-    expect(result.content).toBe("[系统] 已中断 2 个子代理会话。");
+    expect(result.content).toBe("🦞 已中断 2 个子代理会话");
     expect(request).toHaveBeenNthCalledWith(1, "sessions.list", {});
     expect(request).toHaveBeenNthCalledWith(2, "chat.abort", {
       sessionKey: "agent:main:subagent:mine",
@@ -257,7 +280,7 @@ describe("executeSlashCommand directives", () => {
     );
 
     expect(result.content).toBe(
-      "[系统] **当前模型：** `gpt-4.1-mini`\n**可选模型：** `gpt-4.1-mini`, `gpt-4.1`",
+      "🦞 **当前模型** `gpt-4.1-mini`\n**可选模型** `gpt-4.1-mini`, `gpt-4.1`",
     );
     expect(request).toHaveBeenNthCalledWith(1, "sessions.list", {});
     expect(request).toHaveBeenNthCalledWith(2, "models.list", {});
@@ -289,7 +312,7 @@ describe("executeSlashCommand directives", () => {
     );
 
     expect(result.content).toBe(
-      "[系统] **会话用量**\n输入：**1.2k** tokens\n输出：**300** tokens\n总计：**1.5k** tokens\n上下文：**30%** / 4k\n模型：`gpt-4.1-mini`",
+      "🦞 **会话用量**\n输入 **1.2k** 个令牌\n输出 **300** 个令牌\n总计 **1.5k** 个令牌\n上下文 **30%** / 4k\n模型 `gpt-4.1-mini`",
     );
     expect(request).toHaveBeenNthCalledWith(1, "sessions.list", {});
   });
@@ -322,7 +345,7 @@ describe("executeSlashCommand directives", () => {
     );
 
     expect(result.content).toBe(
-      "[系统] 当前思考等级：low。\n可选项：off, minimal, low, medium, high, adaptive。",
+      "🦞 当前思考等级 低\n可用等级 off、minimal、low、medium、high、adaptive",
     );
     expect(request).toHaveBeenNthCalledWith(1, "sessions.list", {});
     expect(request).toHaveBeenNthCalledWith(2, "models.list", {});
@@ -344,8 +367,8 @@ describe("executeSlashCommand directives", () => {
       "xhigh",
     );
 
-    expect(minimal.content).toBe("[系统] 已将思考等级设为 **minimal**。");
-    expect(xhigh.content).toBe("[系统] 已将思考等级设为 **xhigh**。");
+    expect(minimal.content).toBe("🦞 已将思考等级设为 **极简**");
+    expect(xhigh.content).toBe("🦞 已将思考等级设为 **极高**");
     expect(request).toHaveBeenNthCalledWith(1, "sessions.patch", {
       key: "agent:main:main",
       thinkingLevel: "minimal",
@@ -373,7 +396,7 @@ describe("executeSlashCommand directives", () => {
       "",
     );
 
-    expect(result.content).toBe("[系统] 当前详细级别：full。\n可选项：on, full, off。");
+    expect(result.content).toBe("🦞 当前详细级别 完整\n可用等级 on、full、off");
     expect(request).toHaveBeenNthCalledWith(1, "sessions.list", {});
   });
 
@@ -394,7 +417,7 @@ describe("executeSlashCommand directives", () => {
       "",
     );
 
-    expect(result.content).toBe("[系统] 当前快速模式：on。\n可选项：status, on, off。");
+    expect(result.content).toBe("🦞 当前快速模式 开启\n可用值 status、on、off");
     expect(request).toHaveBeenNthCalledWith(1, "sessions.list", {});
   });
 
@@ -408,7 +431,7 @@ describe("executeSlashCommand directives", () => {
       "on",
     );
 
-    expect(result.content).toBe("[系统] 快速模式已开启。");
+    expect(result.content).toBe("🦞 快速模式已开启");
     expect(request).toHaveBeenCalledWith("sessions.patch", {
       key: "agent:main:main",
       fastMode: true,

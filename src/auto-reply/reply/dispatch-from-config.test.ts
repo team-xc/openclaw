@@ -86,12 +86,12 @@ vi.mock("./route-reply.js", () => ({
 
 vi.mock("./abort.js", () => ({
   tryFastAbortFromMessage: mocks.tryFastAbortFromMessage,
-  formatAbortReplyText: (stoppedSubagents?: number) => {
+  resolveLocalizedAbortReplyText: (params: { stoppedSubagents?: number }) => {
+    const stoppedSubagents = params.stoppedSubagents;
     if (typeof stoppedSubagents !== "number" || stoppedSubagents <= 0) {
-      return "⚙️ Agent was aborted.";
+      return "🦞 已中断当前任务";
     }
-    const label = stoppedSubagents === 1 ? "sub-agent" : "sub-agents";
-    return `⚙️ Agent was aborted. Stopped ${stoppedSubagents} ${label}.`;
+    return `🦞 已中断当前任务 并停止 ${stoppedSubagents} 个子代理`;
   },
 }));
 
@@ -707,7 +707,7 @@ describe("dispatchReplyFromConfig", () => {
 
     expect(replyResolver).not.toHaveBeenCalled();
     expect(dispatcher.sendFinalReply).toHaveBeenCalledWith({
-      text: "⚙️ Agent was aborted.",
+      text: "🦞 已中断当前任务",
     });
   });
 
@@ -732,7 +732,7 @@ describe("dispatchReplyFromConfig", () => {
     });
 
     expect(dispatcher.sendFinalReply).toHaveBeenCalledWith({
-      text: "⚙️ Agent was aborted. Stopped 2 sub-agents.",
+      text: "🦞 已中断当前任务 并停止 2 个子代理",
     });
   });
 

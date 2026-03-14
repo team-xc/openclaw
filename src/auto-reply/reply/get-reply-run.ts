@@ -69,10 +69,10 @@ function buildResetSessionNoticeText(params: {
     normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
   return modelLabel === defaultLabel
     ? isChineseSurface
-      ? `[系统] 已开始新会话 · 模型：${modelLabel}`
+      ? `🦞 已开始新会话 模型 ${modelLabel}`
       : `✅ New session started · model: ${modelLabel}`
     : isChineseSurface
-      ? `[系统] 已开始新会话 · 模型：${modelLabel}（默认：${defaultLabel}）`
+      ? `🦞 已开始新会话 模型 ${modelLabel} 默认 ${defaultLabel}`
       : `✅ New session started · model: ${modelLabel} (default: ${defaultLabel})`;
 }
 

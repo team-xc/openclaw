@@ -180,7 +180,7 @@ describe("/session idle and /session max-age", () => {
       accountId: "default",
       idleTimeoutMs: 2 * 60 * 60 * 1000,
     });
-    expect(text).toContain("Idle timeout set to 2h");
+    expect(text).toContain("空闲超时为 2h");
     expect(text).toContain("2026-02-20T02:00:00.000Z");
   });
 
@@ -195,7 +195,7 @@ describe("/session idle and /session max-age", () => {
     hoisted.getThreadBindingManagerMock.mockReturnValue(createFakeThreadBindingManager(binding));
 
     const result = await handleSessionCommand(createDiscordCommandParams("/session idle"), true);
-    expect(result?.reply?.text).toContain("Idle timeout active (2h");
+    expect(result?.reply?.text).toContain("空闲超时已启用 2h");
     expect(result?.reply?.text).toContain("2026-02-20T02:00:00.000Z");
   });
 
@@ -224,7 +224,7 @@ describe("/session idle and /session max-age", () => {
       accountId: "default",
       maxAgeMs: 3 * 60 * 60 * 1000,
     });
-    expect(text).toContain("Max age set to 3h");
+    expect(text).toContain("最大时长为 3h");
     expect(text).toContain("2026-02-20T03:00:00.000Z");
   });
 
@@ -253,7 +253,7 @@ describe("/session idle and /session max-age", () => {
       accountId: "default",
       idleTimeoutMs: 2 * 60 * 60 * 1000,
     });
-    expect(text).toContain("Idle timeout set to 2h");
+    expect(text).toContain("空闲超时为 2h");
     expect(text).toContain("2026-02-20T02:00:00.000Z");
   });
 
@@ -285,7 +285,7 @@ describe("/session idle and /session max-age", () => {
       accountId: "default",
       maxAgeMs: 3 * 60 * 60 * 1000,
     });
-    expect(text).toContain("Max age set to 3h");
+    expect(text).toContain("最大时长为 3h");
     expect(text).toContain("2026-02-20T01:00:00.000Z");
   });
 
@@ -304,15 +304,13 @@ describe("/session idle and /session max-age", () => {
       accountId: "default",
       maxAgeMs: 0,
     });
-    expect(result?.reply?.text).toContain("Max age disabled");
+    expect(result?.reply?.text).toContain("关闭最大时长");
   });
 
   it("is unavailable outside discord and telegram", async () => {
     const params = buildCommandTestParams("/session idle 2h", baseCfg);
     const result = await handleSessionCommand(params, true);
-    expect(result?.reply?.text).toContain(
-      "currently available for Discord and Telegram bound sessions",
-    );
+    expect(result?.reply?.text).toContain("目前仅支持 Discord 和 Telegram 的已聚焦会话");
   });
 
   it("requires binding owner for lifecycle updates", async () => {
@@ -327,6 +325,6 @@ describe("/session idle and /session max-age", () => {
     );
 
     expect(hoisted.setThreadBindingIdleTimeoutBySessionKeyMock).not.toHaveBeenCalled();
-    expect(result?.reply?.text).toContain("Only owner-1 can update session lifecycle settings");
+    expect(result?.reply?.text).toContain("只有 owner-1 可以修改");
   });
 });

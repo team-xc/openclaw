@@ -165,10 +165,9 @@ export function resetAbortMemoryForTest(): void {
 
 export function formatAbortReplyText(stoppedSubagents?: number): string {
   if (typeof stoppedSubagents !== "number" || stoppedSubagents <= 0) {
-    return "⚙️ Agent was aborted.";
+    return "🦞 已中断当前任务";
   }
-  const label = stoppedSubagents === 1 ? "sub-agent" : "sub-agents";
-  return `⚙️ Agent was aborted. Stopped ${stoppedSubagents} ${label}.`;
+  return `🦞 已中断当前任务 并停止 ${stoppedSubagents} 个子代理`;
 }
 
 export function resolveLocalizedAbortReplyText(params: {
@@ -179,12 +178,12 @@ export function resolveLocalizedAbortReplyText(params: {
   const isChineseSurface =
     normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
   if (typeof params.stoppedSubagents !== "number" || params.stoppedSubagents <= 0) {
-    return isChineseSurface ? "[系统] 已中断当前任务。" : "⚙️ Agent was aborted.";
+    return isChineseSurface ? "🦞 已中断当前任务" : "Agent was aborted.";
   }
   const label = params.stoppedSubagents === 1 ? "sub-agent" : "sub-agents";
   return isChineseSurface
-    ? `[系统] 已中断当前任务，并停止 ${params.stoppedSubagents} 个子代理。`
-    : `⚙️ Agent was aborted. Stopped ${params.stoppedSubagents} ${label}.`;
+    ? `🦞 已中断当前任务 并停止 ${params.stoppedSubagents} 个子代理`
+    : `Agent was aborted. Stopped ${params.stoppedSubagents} ${label}.`;
 }
 
 export function resolveSessionEntryForKey(

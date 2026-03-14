@@ -112,18 +112,25 @@ function parseExportArgs(commandBodyNormalized: string): { outputPath?: string }
 
 export async function buildExportSessionReply(params: HandleCommandsParams): Promise<ReplyPayload> {
   const args = parseExportArgs(params.command.commandBodyNormalized);
+  const normalizedSurface = normalizeMessageChannel(params.command.channel);
+  const isChineseSurface =
+    normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
 
   // 1. Resolve session file
   const sessionEntry = params.sessionEntry;
   if (!sessionEntry?.sessionId) {
-    return { text: "❌ No active session found." };
+    return { text: isChineseSurface ? "🦞 未找到当前会话" : "❌ No active session found." };
   }
 
   const storePath = resolveDefaultSessionStorePath(params.agentId);
   const store = loadSessionStore(storePath, { skipCache: true });
   const entry = store[params.sessionKey] as SessionEntry | undefined;
   if (!entry?.sessionId) {
-    return { text: `❌ Session not found: ${params.sessionKey}` };
+    return {
+      text: isChineseSurface
+        ? `🦞 未找到会话 ${params.sessionKey}`
+        : `❌ Session not found: ${params.sessionKey}`,
+    };
   }
 
   let sessionFile: string;
@@ -135,12 +142,18 @@ export async function buildExportSessionReply(params: HandleCommandsParams): Pro
     );
   } catch (err) {
     return {
-      text: `❌ Failed to resolve session file: ${err instanceof Error ? err.message : String(err)}`,
+      text: isChineseSurface
+        ? `🦞 无法解析会话文件 ${err instanceof Error ? err.message : String(err)}`
+        : `❌ Failed to resolve session file: ${err instanceof Error ? err.message : String(err)}`,
     };
   }
 
   if (!fs.existsSync(sessionFile)) {
-    return { text: `❌ Session file not found: ${sessionFile}` };
+    return {
+      text: isChineseSurface
+        ? `🦞 未找到会话文件 ${sessionFile}`
+        : `❌ Session file not found: ${sessionFile}`,
+    };
   }
 
   // 2. Load session entries
@@ -190,19 +203,15 @@ export async function buildExportSessionReply(params: HandleCommandsParams): Pro
 
   const relativePath = path.relative(params.workspaceDir, outputPath);
   const displayPath = relativePath.startsWith("..") ? outputPath : relativePath;
-  const normalizedSurface = normalizeMessageChannel(params.command.channel);
-  const isChineseSurface =
-    normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
 
   return {
     text: isChineseSurface
       ? [
-          "[系统] 会话已导出！",
-          "",
-          `文件：${displayPath}`,
-          `条目数：${entries.length}`,
-          `系统提示词：${systemPrompt.length.toLocaleString()} 字符`,
-          `工具数：${tools.length}`,
+          "🦞 会话已导出",
+          `文件 ${displayPath}`,
+          `条目 ${entries.length}`,
+          `系统提示词 ${systemPrompt.length.toLocaleString()} 字符`,
+          `工具 ${tools.length}`,
         ].join("\n")
       : [
           "✅ Session exported!",

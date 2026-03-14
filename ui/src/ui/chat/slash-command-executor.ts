@@ -18,9 +18,19 @@ import {
   isSubagentSessionKey,
   parseAgentSessionKey,
 } from "../../../../src/routing/session-key.js";
+import {
+  formatEnglishOptions,
+  localizeFastModeLabel,
+  localizeThinkingLevelLabel,
+  localizeVerboseLevelLabel,
+} from "../../../../src/shared/system-command-display.js";
 import type { GatewayBrowserClient } from "../gateway.ts";
 import type { AgentsListResult, GatewaySessionRow, SessionsListResult } from "../types.ts";
 import { SLASH_COMMANDS } from "./slash-commands.ts";
+
+function localizeThinkingOptions(provider?: string, model?: string): string {
+  return formatEnglishOptions(formatThinkingLevels(provider, model));
+}
 
 export type SlashCommandResult = {
   /** Markdown-formatted result to display in chat. */
@@ -49,15 +59,15 @@ export async function executeSlashCommand(
     case "status":
       return await executeStatus(client);
     case "new":
-      return { content: "[系统] 正在开始新会话...", action: "new-session" };
+      return { content: "🦞 正在开始新会话", action: "new-session" };
     case "reset":
-      return { content: "[系统] 正在重置当前会话...", action: "reset" };
+      return { content: "🦞 正在重置当前会话", action: "reset" };
     case "stop":
-      return { content: "[系统] 正在中断当前任务...", action: "stop" };
+      return { content: "🦞 正在中断当前任务", action: "stop" };
     case "clear":
-      return { content: "[系统] 聊天记录已清空。", action: "clear" };
+      return { content: "🦞 聊天记录已清空", action: "clear" };
     case "focus":
-      return { content: "[系统] 已切换专注模式。", action: "toggle-focus" };
+      return { content: "🦞 已切换专注模式", action: "toggle-focus" };
     case "compact":
       return await executeCompact(client, sessionKey);
     case "model":
@@ -69,7 +79,7 @@ export async function executeSlashCommand(
     case "verbose":
       return await executeVerbose(client, sessionKey, args);
     case "export":
-      return { content: "[系统] 正在导出会话...", action: "export" };
+      return { content: "🦞 正在导出会话", action: "export" };
     case "usage":
       return await executeUsage(client, sessionKey);
     case "agents":
@@ -77,14 +87,14 @@ export async function executeSlashCommand(
     case "kill":
       return await executeKill(client, sessionKey, args);
     default:
-      return { content: `[系统] 未知命令：\`/${commandName}\`` };
+      return { content: `🦞 未知命令 \`/${commandName}\`` };
   }
 }
 
 // ── Command Implementations ──
 
 function executeHelp(): SlashCommandResult {
-  const lines = ["[系统] **可用命令**\n"];
+  const lines = ["🦞 **可用命令**\n"];
   let currentCategory = "";
 
   for (const cmd of SLASH_COMMANDS) {
@@ -94,11 +104,11 @@ function executeHelp(): SlashCommandResult {
       lines.push(`**${localizeCategory(cat)}**`);
     }
     const argStr = cmd.args ? ` ${cmd.args}` : "";
-    const local = cmd.executeLocal ? "" : " *(agent)*";
-    lines.push(`\`/${cmd.name}${argStr}\` — ${cmd.description}${local}`);
+    const local = cmd.executeLocal ? "" : " 代理执行";
+    lines.push(`\`/${cmd.name}${argStr}\` ${cmd.description}${local}`);
   }
 
-  lines.push("\n输入 `/` 可打开命令菜单。");
+  lines.push("\n输入 `/` 可打开命令菜单");
   return { content: lines.join("\n") };
 }
 
@@ -109,17 +119,17 @@ async function executeStatus(client: GatewayBrowserClient): Promise<SlashCommand
     const agentCount = health.agents?.length ?? 0;
     const sessionCount = health.sessions?.count ?? 0;
     const lines = [
-      `[系统] **系统状态：** ${status}`,
-      `**代理数量：** ${agentCount}`,
-      `**会话数量：** ${sessionCount}`,
-      `**默认代理：** ${health.defaultAgentId || "none"}`,
+      `🦞 **系统状态** ${status}`,
+      `**代理数量** ${agentCount}`,
+      `**会话数量** ${sessionCount}`,
+      `**默认代理** ${health.defaultAgentId || "未设置"}`,
     ];
     if (health.durationMs) {
-      lines.push(`**响应时间：** ${health.durationMs}ms`);
+      lines.push(`**响应时间** ${health.durationMs}ms`);
     }
     return { content: lines.join("\n") };
   } catch (err) {
-    return { content: `[系统] 获取系统状态失败：${String(err)}` };
+    return { content: `🦞 获取系统状态失败 ${String(err)}` };
   }
 }
 
@@ -129,9 +139,9 @@ async function executeCompact(
 ): Promise<SlashCommandResult> {
   try {
     await client.request("sessions.compact", { key: sessionKey });
-    return { content: "[系统] 上下文压缩完成。", action: "refresh" };
+    return { content: "🦞 上下文压缩完成", action: "refresh" };
   } catch (err) {
-    return { content: `[系统] 压缩上下文失败：${String(err)}` };
+    return { content: `🦞 压缩上下文失败 ${String(err)}` };
   }
 }
 
@@ -147,12 +157,12 @@ async function executeModel(
         client.request<{ models: ModelCatalogEntry[] }>("models.list", {}),
       ]);
       const session = resolveCurrentSession(sessions, sessionKey);
-      const model = session?.model || sessions?.defaults?.model || "default";
+      const model = session?.model || sessions?.defaults?.model || "默认";
       const available = models?.models?.map((m: ModelCatalogEntry) => m.id) ?? [];
-      const lines = [`[系统] **当前模型：** \`${model}\``];
+      const lines = [`🦞 **当前模型** \`${model}\``];
       if (available.length > 0) {
         lines.push(
-          `**可选模型：** ${available
+          `**可选模型** ${available
             .slice(0, 10)
             .map((m: string) => `\`${m}\``)
             .join(", ")}${available.length > 10 ? ` +${available.length - 10} 个` : ""}`,
@@ -160,15 +170,15 @@ async function executeModel(
       }
       return { content: lines.join("\n") };
     } catch (err) {
-      return { content: `[系统] 获取模型信息失败：${String(err)}` };
+      return { content: `🦞 获取模型信息失败 ${String(err)}` };
     }
   }
 
   try {
     await client.request("sessions.patch", { key: sessionKey, model: args.trim() });
-    return { content: `[系统] 模型已切换为 \`${args.trim()}\`。`, action: "refresh" };
+    return { content: `🦞 模型已切换为 \`${args.trim()}\``, action: "refresh" };
   } catch (err) {
-    return { content: `[系统] 设置模型失败：${String(err)}` };
+    return { content: `🦞 设置模型失败 ${String(err)}` };
   }
 }
 
@@ -183,12 +193,13 @@ async function executeThink(
       const { session, models } = await loadThinkingCommandState(client, sessionKey);
       return {
         content: formatDirectiveOptions(
-          `[系统] 当前思考等级：${resolveCurrentThinkingLevel(session, models)}。`,
-          formatThinkingLevels(session?.modelProvider, session?.model),
+          `🦞 当前思考等级 ${localizeThinkingLevelLabel(resolveCurrentThinkingLevel(session, models))}`,
+          localizeThinkingOptions(session?.modelProvider, session?.model),
+          "可用等级",
         ),
       };
     } catch (err) {
-      return { content: `[系统] 获取思考等级失败：${String(err)}` };
+      return { content: `🦞 获取思考等级失败 ${String(err)}` };
     }
   }
 
@@ -197,21 +208,21 @@ async function executeThink(
     try {
       const session = await loadCurrentSession(client, sessionKey);
       return {
-        content: `[系统] 无法识别思考等级“${rawLevel}”。可用等级：${formatThinkingLevels(session?.modelProvider, session?.model)}。`,
+        content: `🦞 无法识别思考等级“${rawLevel}”\n可用等级 ${localizeThinkingOptions(session?.modelProvider, session?.model)}`,
       };
     } catch (err) {
-      return { content: `[系统] 校验思考等级失败：${String(err)}` };
+      return { content: `🦞 校验思考等级失败 ${String(err)}` };
     }
   }
 
   try {
     await client.request("sessions.patch", { key: sessionKey, thinkingLevel: level });
     return {
-      content: `[系统] 已将思考等级设为 **${level}**。`,
+      content: `🦞 已将思考等级设为 **${localizeThinkingLevelLabel(level)}**`,
       action: "refresh",
     };
   } catch (err) {
-    return { content: `[系统] 设置思考等级失败：${String(err)}` };
+    return { content: `🦞 设置思考等级失败 ${String(err)}` };
   }
 }
 
@@ -226,30 +237,31 @@ async function executeVerbose(
       const session = await loadCurrentSession(client, sessionKey);
       return {
         content: formatDirectiveOptions(
-          `[系统] 当前详细级别：${normalizeVerboseLevel(session?.verboseLevel) ?? "off"}。`,
-          "on, full, off",
+          `🦞 当前详细级别 ${localizeVerboseLevelLabel(normalizeVerboseLevel(session?.verboseLevel) ?? "off")}`,
+          formatEnglishOptions(["on", "full", "off"]),
+          "可用等级",
         ),
       };
     } catch (err) {
-      return { content: `[系统] 获取详细级别失败：${String(err)}` };
+      return { content: `🦞 获取详细级别失败 ${String(err)}` };
     }
   }
 
   const level = normalizeVerboseLevel(rawLevel);
   if (!level) {
     return {
-      content: `[系统] 无法识别详细级别“${rawLevel}”。可用等级：off, on, full。`,
+      content: `🦞 无法识别详细级别“${rawLevel}”\n可用等级 ${formatEnglishOptions(["off", "on", "full"])}`,
     };
   }
 
   try {
     await client.request("sessions.patch", { key: sessionKey, verboseLevel: level });
     return {
-      content: `[系统] 已将详细模式设为 **${level}**。`,
+      content: `🦞 已将详细模式设为 **${localizeVerboseLevelLabel(level)}**`,
       action: "refresh",
     };
   } catch (err) {
-    return { content: `[系统] 设置详细模式失败：${String(err)}` };
+    return { content: `🦞 设置详细模式失败 ${String(err)}` };
   }
 }
 
@@ -265,29 +277,30 @@ async function executeFast(
       const session = await loadCurrentSession(client, sessionKey);
       return {
         content: formatDirectiveOptions(
-          `[系统] 当前快速模式：${resolveCurrentFastMode(session)}。`,
-          "status, on, off",
+          `🦞 当前快速模式 ${localizeFastModeLabel(resolveCurrentFastMode(session))}`,
+          formatEnglishOptions(["status", "on", "off"]),
+          "可用值",
         ),
       };
     } catch (err) {
-      return { content: `[系统] 获取快速模式失败：${String(err)}` };
+      return { content: `🦞 获取快速模式失败 ${String(err)}` };
     }
   }
 
   if (rawMode !== "on" && rawMode !== "off") {
     return {
-      content: `[系统] 无法识别快速模式“${args.trim()}”。可用值：status, on, off。`,
+      content: `🦞 无法识别快速模式“${args.trim()}”\n可用值 ${formatEnglishOptions(["status", "on", "off"])}`,
     };
   }
 
   try {
     await client.request("sessions.patch", { key: sessionKey, fastMode: rawMode === "on" });
     return {
-      content: `[系统] 快速模式已${rawMode === "on" ? "开启" : "关闭"}。`,
+      content: `🦞 快速模式已${rawMode === "on" ? "开启" : "关闭"}`,
       action: "refresh",
     };
   } catch (err) {
-    return { content: `[系统] 设置快速模式失败：${String(err)}` };
+    return { content: `🦞 设置快速模式失败 ${String(err)}` };
   }
 }
 
@@ -299,7 +312,7 @@ async function executeUsage(
     const sessions = await client.request<SessionsListResult>("sessions.list", {});
     const session = resolveCurrentSession(sessions, sessionKey);
     if (!session) {
-      return { content: "[系统] 当前没有活动会话。" };
+      return { content: "🦞 当前没有活动会话" };
     }
     const input = session.inputTokens ?? 0;
     const output = session.outputTokens ?? 0;
@@ -308,20 +321,20 @@ async function executeUsage(
     const pct = ctx > 0 ? Math.round((input / ctx) * 100) : null;
 
     const lines = [
-      "[系统] **会话用量**",
-      `输入：**${fmtTokens(input)}** tokens`,
-      `输出：**${fmtTokens(output)}** tokens`,
-      `总计：**${fmtTokens(total)}** tokens`,
+      "🦞 **会话用量**",
+      `输入 **${fmtTokens(input)}** 个令牌`,
+      `输出 **${fmtTokens(output)}** 个令牌`,
+      `总计 **${fmtTokens(total)}** 个令牌`,
     ];
     if (pct !== null) {
-      lines.push(`上下文：**${pct}%** / ${fmtTokens(ctx)}`);
+      lines.push(`上下文 **${pct}%** / ${fmtTokens(ctx)}`);
     }
     if (session.model) {
-      lines.push(`模型：\`${session.model}\``);
+      lines.push(`模型 \`${session.model}\``);
     }
     return { content: lines.join("\n") };
   } catch (err) {
-    return { content: `[系统] 获取用量失败：${String(err)}` };
+    return { content: `🦞 获取用量失败 ${String(err)}` };
   }
 }
 
@@ -330,18 +343,18 @@ async function executeAgents(client: GatewayBrowserClient): Promise<SlashCommand
     const result = await client.request<AgentsListResult>("agents.list", {});
     const agents = result?.agents ?? [];
     if (agents.length === 0) {
-      return { content: "[系统] 当前没有已配置的代理。" };
+      return { content: "🦞 当前没有已配置的代理" };
     }
-    const lines = [`[系统] **代理列表**（${agents.length}）\n`];
+    const lines = [`🦞 **代理列表** ${agents.length}\n`];
     for (const agent of agents) {
       const isDefault = agent.id === result?.defaultId;
       const name = agent.identity?.name || agent.name || agent.id;
-      const marker = isDefault ? " *(默认)*" : "";
+      const marker = isDefault ? " 默认" : "";
       lines.push(`- \`${agent.id}\` — ${name}${marker}`);
     }
     return { content: lines.join("\n") };
   } catch (err) {
-    return { content: `[系统] 获取代理列表失败：${String(err)}` };
+    return { content: `🦞 获取代理列表失败 ${String(err)}` };
   }
 }
 
@@ -352,7 +365,7 @@ async function executeKill(
 ): Promise<SlashCommandResult> {
   const target = args.trim();
   if (!target) {
-    return { content: "[系统] 用法：`/kill <id|all>`" };
+    return { content: "🦞 用法 `/kill <id|all>`" };
   }
   try {
     const sessions = await client.request<SessionsListResult>("sessions.list", {});
@@ -361,8 +374,8 @@ async function executeKill(
       return {
         content:
           target.toLowerCase() === "all"
-            ? "[系统] 未找到活动中的子代理会话。"
-            : `[系统] 未找到匹配 \`${target}\` 的子代理会话。`,
+            ? "🦞 未找到活动中的子代理会话"
+            : `🦞 未找到匹配 \`${target}\` 的子代理会话`,
       };
     }
 
@@ -381,30 +394,30 @@ async function executeKill(
         return {
           content:
             target.toLowerCase() === "all"
-              ? "[系统] 没有可中断的活动任务。"
-              : `[系统] 没有匹配 \`${target}\` 的活动任务。`,
+              ? "🦞 没有可中断的活动任务"
+              : `🦞 没有匹配 \`${target}\` 的活动任务`,
         };
       }
-      throw rejected[0]?.reason ?? new Error("abort failed");
+      throw rejected[0]?.reason ?? new Error("中断请求失败");
     }
 
     if (target.toLowerCase() === "all") {
       return {
         content:
           successCount === matched.length
-            ? `[系统] 已中断 ${successCount} 个子代理会话。`
-            : `[系统] 已中断 ${matched.length} 个子代理会话中的 ${successCount} 个。`,
+            ? `🦞 已中断 ${successCount} 个子代理会话`
+            : `🦞 已中断 ${matched.length} 个子代理会话中的 ${successCount} 个`,
       };
     }
 
     return {
       content:
         successCount === matched.length
-          ? `[系统] 已中断匹配 \`${target}\` 的 ${successCount} 个子代理会话。`
-          : `[系统] 已中断匹配 \`${target}\` 的 ${matched.length} 个子代理会话中的 ${successCount} 个。`,
+          ? `🦞 已中断匹配 \`${target}\` 的 ${successCount} 个子代理会话`
+          : `🦞 已中断匹配 \`${target}\` 的 ${matched.length} 个子代理会话中的 ${successCount} 个`,
     };
   } catch (err) {
-    return { content: `[系统] 中断任务失败：${String(err)}` };
+    return { content: `🦞 中断任务失败 ${String(err)}` };
   }
 }
 
@@ -515,8 +528,8 @@ function resolveEquivalentSessionKeys(
   return keys;
 }
 
-function formatDirectiveOptions(text: string, options: string): string {
-  return `${text}\n可选项：${options}。`;
+function formatDirectiveOptions(text: string, options: string, label = "可用参数"): string {
+  return `${text}\n${label} ${options}`;
 }
 
 function localizeCategory(category: string): string {

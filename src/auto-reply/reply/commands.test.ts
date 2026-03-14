@@ -311,7 +311,7 @@ describe("/approve command", () => {
 
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
-    expect(result.reply?.text).toContain("Exec approval allow-once submitted");
+    expect(result.reply?.text).toContain("已为 abc12345 提交执行审批 单次允许");
     expect(callGatewayMock).toHaveBeenCalledWith(
       expect.objectContaining({
         method: "exec.approval.resolve",
@@ -340,8 +340,30 @@ describe("/approve command", () => {
     const result = await handleCommands(params);
 
     expect(result.shouldContinue).toBe(false);
-    expect(result.reply?.text).toContain("targets a different Telegram bot");
+    expect(result.reply?.text).toContain("指向了另一个 Telegram 机器人");
     expect(callGatewayMock).not.toHaveBeenCalled();
+  });
+
+  it("shows Chinese usage for Telegram /approve when arguments are missing", async () => {
+    const cfg = {
+      commands: { text: true },
+      channels: {
+        telegram: {
+          allowFrom: ["*"],
+          execApprovals: { enabled: true, approvers: ["123"], target: "dm" },
+        },
+      },
+    } as OpenClawConfig;
+    const params = buildParams("/approve", cfg, {
+      Provider: "telegram",
+      Surface: "telegram",
+      SenderId: "123",
+    });
+
+    const result = await handleCommands(params);
+
+    expect(result.shouldContinue).toBe(false);
+    expect(result.reply?.text).toContain("🦞 用法 /approve <id> allow-once|allow-always|deny");
   });
 
   it("surfaces unknown or expired approval id errors", async () => {
@@ -380,7 +402,7 @@ describe("/approve command", () => {
 
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
-    expect(result.reply?.text).toContain("Telegram exec approvals are not enabled");
+    expect(result.reply?.text).toContain("当前 Telegram 机器人账号未启用执行审批");
     expect(callGatewayMock).not.toHaveBeenCalled();
   });
 
@@ -402,7 +424,7 @@ describe("/approve command", () => {
 
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
-    expect(result.reply?.text).toContain("not authorized to approve");
+    expect(result.reply?.text).toContain("你无权在 Telegram 上审批执行请求");
     expect(callGatewayMock).not.toHaveBeenCalled();
   });
 

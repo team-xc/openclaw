@@ -218,7 +218,7 @@ describe("runPreparedReply media-only handling", () => {
     const resetNoticeCall = vi.mocked(routeReply).mock.calls[0]?.[0] as
       | { payload?: { text?: string } }
       | undefined;
-    expect(resetNoticeCall?.payload?.text).toContain("✅ New session started · model:");
+    expect(resetNoticeCall?.payload?.text).toContain("New session started · model:");
     expect(resetNoticeCall?.payload?.text).not.toContain("🔑");
     expect(resetNoticeCall?.payload?.text).not.toContain("api-key");
     expect(resetNoticeCall?.payload?.text).not.toContain("env:");

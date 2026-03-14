@@ -29,7 +29,7 @@ import { INTERNAL_MESSAGE_CHANNEL, normalizeMessageChannel } from "../../utils/m
 import { getReplyFromConfig } from "../reply.js";
 import type { FinalizedMsgContext } from "../templating.js";
 import type { GetReplyOptions, ReplyPayload } from "../types.js";
-import { formatAbortReplyText, tryFastAbortFromMessage } from "./abort.js";
+import { resolveLocalizedAbortReplyText, tryFastAbortFromMessage } from "./abort.js";
 import { shouldBypassAcpDispatchForCommand, tryDispatchAcpReply } from "./dispatch-acp.js";
 import { shouldSkipDuplicateInbound } from "./inbound-dedupe.js";
 import type { ReplyDispatcher, ReplyDispatchKind } from "./reply-dispatcher.js";
@@ -278,7 +278,10 @@ export async function dispatchReplyFromConfig(params: {
     const fastAbort = await tryFastAbortFromMessage({ ctx, cfg });
     if (fastAbort.handled) {
       const payload = {
-        text: formatAbortReplyText(fastAbort.stoppedSubagents),
+        text: resolveLocalizedAbortReplyText({
+          surface: channel,
+          stoppedSubagents: fastAbort.stoppedSubagents,
+        }),
       } satisfies ReplyPayload;
       let queuedFinal = false;
       let routedFinalCount = 0;

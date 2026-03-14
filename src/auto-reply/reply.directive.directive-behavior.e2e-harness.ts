@@ -128,9 +128,9 @@ export function assertModelSelection(
 
 export function assertElevatedOffStatusReply(text: string | undefined) {
   expect(text).toContain("Elevated mode disabled.");
-  const optionsLine = text?.split("\n").find((line) => line.trim().startsWith("⚙️"));
+  const optionsLine = text?.split("\n").find((line) => line.includes("运行时："));
   expect(optionsLine).toBeTruthy();
-  expect(optionsLine).not.toContain("elevated");
+  expect(optionsLine).not.toContain("高级：");
 }
 
 export function installDirectiveBehaviorE2EHooks() {

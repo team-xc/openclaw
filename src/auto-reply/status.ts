@@ -20,11 +20,18 @@ import {
   type SessionEntry,
   type SessionScope,
 } from "../config/sessions.js";
-import { formatTimeAgo } from "../infra/format-time/format-relative.ts";
 import { resolveCommitHash } from "../infra/git-commit.js";
 import type { MediaUnderstandingDecision } from "../media-understanding/types.js";
 import { listPluginCommands } from "../plugins/commands.js";
 import { resolveAgentIdFromSessionKey } from "../routing/session-key.js";
+import {
+  localizeGroupActivation,
+  localizeQueueDropLabel,
+  localizeQueueModeLabel,
+  localizeRuntimeLabel,
+  localizeThinkingLevelLabel,
+  localizeToggleValue,
+} from "../shared/system-command-display.js";
 import {
   getTtsMaxLength,
   getTtsProvider,
@@ -120,6 +127,89 @@ function normalizeAuthMode(value?: string): NormalizedAuthMode | undefined {
   return undefined;
 }
 
+function localizeAuthLabel(value?: string): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const normalized = normalizeAuthMode(trimmed);
+  const label = (() => {
+    switch (normalized) {
+      case "api-key":
+        return "密钥";
+      case "oauth":
+        return "OAuth";
+      case "token":
+        return "令牌";
+      case "aws-sdk":
+        return "AWS SDK";
+      case "mixed":
+        return "混合";
+      case "unknown":
+        return "未知";
+      default:
+        return undefined;
+    }
+  })();
+  if (!label) {
+    return trimmed;
+  }
+  const spaceIndex = trimmed.indexOf(" ");
+  if (spaceIndex === -1) {
+    return label;
+  }
+  return `${label}${trimmed.slice(spaceIndex)}`;
+}
+
+function localizeFallbackReason(reason?: string): string | undefined {
+  const trimmed = reason?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const moreAttemptsMatch = trimmed.match(/^(.*)\s+\(\+(\d+)\s+more attempts\)$/i);
+  const baseReason = (moreAttemptsMatch?.[1] ?? trimmed).trim();
+  const localizedBase = (() => {
+    switch (baseReason.toLowerCase()) {
+      case "selected model unavailable":
+        return "所选模型不可用";
+      case "rate limit":
+        return "速率限制";
+      case "quota exceeded":
+        return "超出配额";
+      case "unauthorized":
+        return "未授权";
+      case "forbidden":
+        return "已拒绝";
+      case "not found":
+        return "未找到";
+      case "timeout":
+        return "超时";
+      case "service unavailable":
+        return "服务不可用";
+      case "bad gateway":
+        return "网关错误";
+      case "gateway timeout":
+        return "网关超时";
+      case "payment required":
+        return "需要付费";
+      case "context overflow":
+        return "上下文超限";
+      case "model overloaded":
+        return "模型过载";
+      case "internal server error":
+        return "内部服务错误";
+      case "error":
+        return "错误";
+      default:
+        return baseReason;
+    }
+  })();
+  if (!moreAttemptsMatch) {
+    return localizedBase;
+  }
+  return `${localizedBase} 另有 ${moreAttemptsMatch[2]} 次尝试`;
+}
+
 function resolveRuntimeLabel(
   args: Pick<StatusArgs, "config" | "agent" | "sessionKey" | "sessionScope">,
 ): string {
@@ -179,15 +269,64 @@ const formatTokens = (total: number | null | undefined, contextTokens: number | 
 export const formatContextUsageShort = (
   total: number | null | undefined,
   contextTokens: number | null | undefined,
-) => `Context ${formatTokens(total, contextTokens ?? null)}`;
+) => `上下文 ${formatTokens(total, contextTokens ?? null)}`;
+
+function formatTimeAgoZh(durationMs: number | null | undefined): string {
+  if (durationMs == null || !Number.isFinite(durationMs) || durationMs < 0) {
+    return "未知";
+  }
+
+  const totalSeconds = Math.round(durationMs / 1000);
+  const minutes = Math.round(totalSeconds / 60);
+  if (minutes < 1) {
+    return "刚刚";
+  }
+  if (minutes < 60) {
+    return `${minutes} 分钟前`;
+  }
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) {
+    return `${hours} 小时前`;
+  }
+  const days = Math.round(hours / 24);
+  return `${days} 天前`;
+}
+
+function localizeMediaCapabilityLabel(capability: string): string {
+  switch (capability.trim().toLowerCase()) {
+    case "image":
+      return "图片";
+    case "audio":
+      return "音频";
+    case "video":
+      return "视频";
+    default:
+      return capability;
+  }
+}
+
+function localizeTtsAutoModeLabel(mode: string): string {
+  switch (mode.trim().toLowerCase()) {
+    case "always":
+      return "始终";
+    case "inbound":
+      return "收到时";
+    case "tagged":
+      return "标签触发";
+    case "off":
+      return "关闭";
+    default:
+      return mode;
+  }
+}
 
 const formatQueueDetails = (queue?: QueueStatus) => {
   if (!queue) {
     return "";
   }
-  const depth = typeof queue.depth === "number" ? `depth ${queue.depth}` : null;
+  const depth = typeof queue.depth === "number" ? `深度 ${queue.depth}` : null;
   if (!queue.showDetails) {
-    return depth ? ` (${depth})` : "";
+    return depth ? ` ${depth}` : "";
   }
   const detailParts: string[] = [];
   if (depth) {
@@ -196,16 +335,16 @@ const formatQueueDetails = (queue?: QueueStatus) => {
   if (typeof queue.debounceMs === "number") {
     const ms = Math.max(0, Math.round(queue.debounceMs));
     const label =
-      ms >= 1000 ? `${ms % 1000 === 0 ? ms / 1000 : (ms / 1000).toFixed(1)}s` : `${ms}ms`;
-    detailParts.push(`debounce ${label}`);
+      ms >= 1000 ? `${ms % 1000 === 0 ? ms / 1000 : (ms / 1000).toFixed(1)} 秒` : `${ms} 毫秒`;
+    detailParts.push(`防抖 ${label}`);
   }
   if (typeof queue.cap === "number") {
-    detailParts.push(`cap ${queue.cap}`);
+    detailParts.push(`上限 ${queue.cap}`);
   }
   if (queue.dropPolicy) {
-    detailParts.push(`drop ${queue.dropPolicy}`);
+    detailParts.push(`丢弃 ${localizeQueueDropLabel(queue.dropPolicy)}`);
   }
-  return detailParts.length ? ` (${detailParts.join(" · ")})` : "";
+  return detailParts.length ? ` ${detailParts.join(" ")}` : "";
 };
 
 const readUsageFromSessionLog = (
@@ -310,7 +449,7 @@ const formatUsagePair = (input?: number | null, output?: number | null) => {
   }
   const inputLabel = typeof input === "number" ? formatTokenCount(input) : "?";
   const outputLabel = typeof output === "number" ? formatTokenCount(output) : "?";
-  return `🧮 Tokens: ${inputLabel} in / ${outputLabel} out`;
+  return `用量 ${inputLabel} 输入 / ${outputLabel} 输出`;
 };
 
 const formatCacheLine = (
@@ -340,7 +479,7 @@ const formatCacheLine = (
       ? Math.round((cacheRead / totalInput) * 100)
       : 0;
 
-  return `🗄️ Cache: ${hitRate}% hit · ${cachedLabel} cached, ${newLabel} new`;
+  return `缓存 命中率 ${hitRate}% 已缓存 ${cachedLabel} 新增 ${newLabel}`;
 };
 
 const formatMediaUnderstandingLine = (decisions?: ReadonlyArray<MediaUnderstandingDecision>) => {
@@ -349,30 +488,31 @@ const formatMediaUnderstandingLine = (decisions?: ReadonlyArray<MediaUnderstandi
   }
   const parts = decisions
     .map((decision) => {
+      const capabilityLabel = localizeMediaCapabilityLabel(decision.capability);
       const count = decision.attachments.length;
-      const countLabel = count > 1 ? ` x${count}` : "";
+      const countLabel = count > 1 ? ` ${count} 个` : "";
       if (decision.outcome === "success") {
         const chosen = decision.attachments.find((entry) => entry.chosen)?.chosen;
         const provider = chosen?.provider?.trim();
         const model = chosen?.model?.trim();
         const modelLabel = provider ? (model ? `${provider}/${model}` : provider) : null;
-        return `${decision.capability}${countLabel} ok${modelLabel ? ` (${modelLabel})` : ""}`;
+        return `${capabilityLabel}${countLabel} 成功${modelLabel ? ` ${modelLabel}` : ""}`;
       }
       if (decision.outcome === "no-attachment") {
-        return `${decision.capability} none`;
+        return `${capabilityLabel} 无`;
       }
       if (decision.outcome === "disabled") {
-        return `${decision.capability} off`;
+        return `${capabilityLabel} 关闭`;
       }
       if (decision.outcome === "scope-deny") {
-        return `${decision.capability} denied`;
+        return `${capabilityLabel} 拒绝`;
       }
       if (decision.outcome === "skipped") {
         const reason = decision.attachments
           .flatMap((entry) => entry.attempts.map((attempt) => attempt.reason).filter(Boolean))
           .find(Boolean);
         const shortReason = reason ? reason.split(":")[0]?.trim() : undefined;
-        return `${decision.capability} skipped${shortReason ? ` (${shortReason})` : ""}`;
+        return `${capabilityLabel} 跳过${shortReason ? ` ${shortReason}` : ""}`;
       }
       return null;
     })
@@ -380,10 +520,10 @@ const formatMediaUnderstandingLine = (decisions?: ReadonlyArray<MediaUnderstandi
   if (parts.length === 0) {
     return null;
   }
-  if (parts.every((part) => part.endsWith(" none"))) {
+  if (parts.every((part) => part.endsWith(" 无"))) {
     return null;
   }
-  return `📎 Media: ${parts.join(" · ")}`;
+  return `媒体 ${parts.join(" ")}`;
 };
 
 const formatVoiceModeLine = (
@@ -405,8 +545,8 @@ const formatVoiceModeLine = (
   }
   const provider = getTtsProvider(ttsConfig, prefsPath);
   const maxLength = getTtsMaxLength(prefsPath);
-  const summarize = isSummarizationEnabled(prefsPath) ? "on" : "off";
-  return `🔊 Voice: ${autoMode} · provider=${provider} · limit=${maxLength} · summary=${summarize}`;
+  const summarize = isSummarizationEnabled(prefsPath) ? "开启" : "关闭";
+  return `语音 ${localizeTtsAutoModeLabel(autoMode)} 提供方 ${provider} 上限 ${maxLength} 摘要 ${summarize}`;
 };
 
 export function buildStatusMessage(args: StatusArgs): string {
@@ -522,12 +662,14 @@ export function buildStatusMessage(args: StatusArgs): string {
   const runtime = { label: resolveRuntimeLabel(args) };
 
   const updatedAt = entry?.updatedAt;
-  const sessionLine = [
-    `Session: ${args.sessionKey ?? "unknown"}`,
-    typeof updatedAt === "number" ? `updated ${formatTimeAgo(now - updatedAt)}` : "no activity",
-  ]
-    .filter(Boolean)
-    .join(" • ");
+  const updatedLabel =
+    typeof updatedAt === "number"
+      ? (() => {
+          const age = formatTimeAgoZh(now - updatedAt);
+          return age === "刚刚" ? "刚刚更新" : `${age}更新`;
+        })()
+      : "暂无活动";
+  const sessionLine = [`会话 ${args.sessionKey ?? "未知"}`, updatedLabel].filter(Boolean).join(" ");
 
   const isGroupSession =
     entry?.chatType === "group" ||
@@ -539,11 +681,11 @@ export function buildStatusMessage(args: StatusArgs): string {
     : undefined;
 
   const contextLine = [
-    `Context: ${formatTokens(totalTokens, contextTokens ?? null)}`,
-    `🧹 Compactions: ${entry?.compactionCount ?? 0}`,
+    `上下文 ${formatTokens(totalTokens, contextTokens ?? null)}`,
+    `压缩次数 ${entry?.compactionCount ?? 0}`,
   ]
     .filter(Boolean)
-    .join(" · ");
+    .join(" ");
 
   const queueMode = args.queue?.mode ?? "unknown";
   const queueDetails = formatQueueDetails(args.queue);
@@ -556,19 +698,21 @@ export function buildStatusMessage(args: StatusArgs): string {
         : `elevated:${elevatedLevel}`
       : null;
   const optionParts = [
-    `Runtime: ${runtime.label}`,
-    `Think: ${thinkLevel}`,
-    fastMode ? "Fast: on" : null,
-    verboseLabel,
-    reasoningLevel !== "off" ? `Reasoning: ${reasoningLevel}` : null,
-    elevatedLabel,
+    `运行时 ${localizeRuntimeLabel(runtime.label)}`,
+    `思考 ${localizeThinkingLevelLabel(thinkLevel)}`,
+    fastMode ? "快速 开启" : null,
+    verboseLabel
+      ? `详细 ${verboseLevel === "full" ? "完整" : verboseLevel === "on" ? "开启" : verboseLevel}`
+      : null,
+    reasoningLevel !== "off" ? `推理 ${localizeToggleValue(reasoningLevel)}` : null,
+    elevatedLabel ? `高级 ${localizeToggleValue(elevatedLevel)}` : null,
   ];
-  const optionsLine = optionParts.filter(Boolean).join(" · ");
+  const optionsLine = optionParts.filter(Boolean).join(" ");
   const activationParts = [
-    groupActivationValue ? `👥 Activation: ${groupActivationValue}` : null,
-    `🪢 Queue: ${queueMode}${queueDetails}`,
+    groupActivationValue ? `激活 ${localizeGroupActivation(groupActivationValue)}` : null,
+    `队列 ${localizeQueueModeLabel(queueMode)}${queueDetails}`,
   ];
-  const activationLine = activationParts.filter(Boolean).join(" · ");
+  const activationLine = activationParts.filter(Boolean).join(" ");
 
   const selectedAuthMode =
     normalizeAuthMode(args.modelAuth) ?? resolveModelAuthMode(selectedProvider, args.config);
@@ -580,8 +724,8 @@ export function buildStatusMessage(args: StatusArgs): string {
   const activeAuthLabelValue =
     args.activeModelAuth ??
     (activeAuthMode && activeAuthMode !== "unknown" ? activeAuthMode : undefined);
-  const selectedModelLabel = modelRefs.selected.label || "unknown";
-  const activeModelLabel = formatProviderModelRef(activeProvider, activeModel) || "unknown";
+  const selectedModelLabel = modelRefs.selected.label || "未知";
+  const activeModelLabel = formatProviderModelRef(activeProvider, activeModel) || "未知";
   const fallbackState = resolveActiveFallbackState({
     selectedModelRef: selectedModelLabel,
     activeModelRef: activeModelLabel,
@@ -611,7 +755,9 @@ export function buildStatusMessage(args: StatusArgs): string {
       : undefined;
   const costLabel = showCost && hasUsage ? formatUsd(cost) : undefined;
 
-  const selectedAuthLabel = selectedAuthLabelValue ? ` · 🔑 ${selectedAuthLabelValue}` : "";
+  const selectedAuthLabel = selectedAuthLabelValue
+    ? ` 认证 ${localizeAuthLabel(selectedAuthLabelValue) ?? selectedAuthLabelValue}`
+    : "";
   const channelModelNote = (() => {
     if (!args.config || !entry) {
       return undefined;
@@ -648,23 +794,25 @@ export function buildStatusMessage(args: StatusArgs): string {
     ) {
       return undefined;
     }
-    return "channel override";
+    return "频道覆盖";
   })();
-  const modelNote = channelModelNote ? ` · ${channelModelNote}` : "";
-  const modelLine = `🧠 Model: ${selectedModelLabel}${selectedAuthLabel}${modelNote}`;
+  const modelNote = channelModelNote ? ` ${channelModelNote}` : "";
+  const modelLine = `模型 ${selectedModelLabel}${selectedAuthLabel}${modelNote}`;
   const showFallbackAuth = activeAuthLabelValue && activeAuthLabelValue !== selectedAuthLabelValue;
   const fallbackLine = fallbackState.active
-    ? `↪️ Fallback: ${activeModelLabel}${
-        showFallbackAuth ? ` · 🔑 ${activeAuthLabelValue}` : ""
-      } (${fallbackState.reason ?? "selected model unavailable"})`
+    ? `回退 ${activeModelLabel}${
+        showFallbackAuth
+          ? ` 认证 ${localizeAuthLabel(activeAuthLabelValue) ?? activeAuthLabelValue}`
+          : ""
+      } 原因 ${localizeFallbackReason(fallbackState.reason) ?? "所选模型不可用"}`
     : null;
   const commit = resolveCommitHash({ moduleUrl: import.meta.url });
-  const versionLine = `🦞 OpenClaw ${VERSION}${commit ? ` (${commit})` : ""}`;
+  const versionLine = `🦞 OpenClaw ${VERSION}${commit ? ` ${commit}` : ""}`;
   const usagePair = formatUsagePair(inputTokens, outputTokens);
   const cacheLine = formatCacheLine(inputTokens, cacheRead, cacheWrite);
-  const costLine = costLabel ? `💵 Cost: ${costLabel}` : null;
+  const costLine = costLabel ? `费用 ${costLabel}` : null;
   const usageCostLine =
-    usagePair && costLine ? `${usagePair} · ${costLine}` : (usagePair ?? costLine);
+    usagePair && costLine ? `${usagePair} ${costLine}` : (usagePair ?? costLine);
   const mediaLine = formatMediaUnderstandingLine(args.mediaDecisions);
   const voiceLine = formatVoiceModeLine(args.config, args.sessionEntry);
 
@@ -675,12 +823,12 @@ export function buildStatusMessage(args: StatusArgs): string {
     fallbackLine,
     usageCostLine,
     cacheLine,
-    `📚 ${contextLine}`,
+    contextLine,
     mediaLine,
     args.usageLine,
-    `🧵 ${sessionLine}`,
+    sessionLine,
     args.subagentsLine,
-    `⚙️ ${optionsLine}`,
+    optionsLine,
     voiceLine,
     activationLine,
   ]
@@ -689,13 +837,13 @@ export function buildStatusMessage(args: StatusArgs): string {
 }
 
 const CATEGORY_LABELS: Record<CommandCategory, string> = {
-  session: "Session",
-  options: "Options",
-  status: "Status",
-  management: "Management",
-  media: "Media",
-  tools: "Tools",
-  docks: "Docks",
+  session: "会话",
+  options: "选项",
+  status: "状态",
+  management: "管理",
+  media: "媒体",
+  tools: "工具",
+  docks: "停靠",
 };
 
 const CATEGORY_ORDER: CommandCategory[] = [
@@ -725,9 +873,9 @@ function groupCommandsByCategory(
 }
 
 export function buildHelpMessage(cfg?: OpenClawConfig): string {
-  const lines = ["ℹ️ Help", ""];
+  const lines = ["🦞 帮助", ""];
 
-  lines.push("Session");
+  lines.push("会话");
   lines.push("  /new  |  /reset  |  /compact [instructions]  |  /stop");
   lines.push("");
 
@@ -738,24 +886,67 @@ export function buildHelpMessage(cfg?: OpenClawConfig): string {
   if (isCommandFlagEnabled(cfg, "debug")) {
     optionParts.push("/debug");
   }
-  lines.push("Options");
+  lines.push("选项");
   lines.push(`  ${optionParts.join("  |  ")}`);
   lines.push("");
 
-  lines.push("Status");
+  lines.push("状态");
   lines.push("  /status  |  /whoami  |  /context");
   lines.push("");
 
-  lines.push("Skills");
+  lines.push("技能");
   lines.push("  /skill <name> [input]");
 
   lines.push("");
-  lines.push("More: /commands for full list");
+  lines.push("更多 输入 /commands 查看完整列表");
 
   return lines.join("\n");
 }
 
 const COMMANDS_PER_PAGE = 8;
+
+const COMMAND_DESCRIPTION_ZH: Record<string, string> = {
+  acp: "管理 ACP 会话和运行选项",
+  activation: "设置群聊激活方式",
+  agents: "查看代理列表",
+  allowlist: "查看或修改白名单",
+  approve: "提交执行审批",
+  clear: "清空聊天记录",
+  commands: "查看完整命令列表",
+  compact: "压缩会话上下文",
+  config: "查看或修改配置",
+  context: "查看上下文状态",
+  debug: "查看调试信息",
+  "dock-telegram": "切换到 Telegram 回复",
+  dock_telegram: "切换到 Telegram 回复",
+  elevated: "切换高级模式",
+  export: "导出会话到 Markdown",
+  "export-session": "导出当前会话到 HTML 文件含完整系统提示",
+  exec: "设置当前会话的执行默认值",
+  fast: "切换快速模式",
+  focus: "切换专注模式",
+  help: "查看帮助",
+  id: "查看当前身份",
+  kill: "中断子代理",
+  model: "查看或设置模型",
+  models: "查看模型提供方或模型列表",
+  new: "开始新会话",
+  queue: "调整队列设置",
+  reasoning: "切换推理可见性",
+  reset: "重置当前会话",
+  restart: "重启 OpenClaw",
+  send: "设置发送策略",
+  skill: "运行技能",
+  status: "查看系统状态",
+  stop: "中断当前任务",
+  subagents: "查看 中断 日志 启动或引导子代理",
+  think: "设置思考等级",
+  tts: "控制文本转语音",
+  unfocus: "移除当前线程或会话绑定",
+  usage: "查看用量",
+  verbose: "切换详细模式",
+  whoami: "查看当前身份",
+};
 
 export type CommandsMessageOptions = {
   page?: number;
@@ -774,6 +965,7 @@ function formatCommandEntry(command: ChatCommandDefinition): string {
   const primary = command.nativeName
     ? `/${command.nativeName}`
     : command.textAliases[0]?.trim() || `/${command.key}`;
+  const descriptionKey = primary.replace(/^\//u, "").trim().toLowerCase();
   const seen = new Set<string>();
   const aliases = command.textAliases
     .map((alias) => alias.trim())
@@ -787,9 +979,13 @@ function formatCommandEntry(command: ChatCommandDefinition): string {
       seen.add(key);
       return true;
     });
-  const aliasLabel = aliases.length ? ` (${aliases.join(", ")})` : "";
-  const scopeLabel = command.scope === "text" ? " [text]" : "";
-  return `${primary}${aliasLabel}${scopeLabel} - ${command.description}`;
+  const aliasLabel = aliases.length ? ` ${aliases.join(" ")}` : "";
+  const scopeLabel = command.scope === "text" ? " 文本" : "";
+  const description =
+    COMMAND_DESCRIPTION_ZH[descriptionKey] ??
+    COMMAND_DESCRIPTION_ZH[command.key] ??
+    command.description;
+  return `${primary}${aliasLabel}${scopeLabel} ${description}`;
 }
 
 type CommandsListItem = {
@@ -816,10 +1012,10 @@ function buildCommandItems(
   }
 
   for (const command of pluginCommands) {
-    const pluginLabel = command.pluginId ? ` (${command.pluginId})` : "";
+    const pluginLabel = command.pluginId ? ` ${command.pluginId}` : "";
     items.push({
-      label: "Plugins",
-      text: `/${command.name}${pluginLabel} - ${command.description}`,
+      label: "插件",
+      text: `/${command.name}${pluginLabel} ${command.description}`,
     });
   }
 
@@ -869,7 +1065,7 @@ export function buildCommandsMessagePaginated(
   const items = buildCommandItems(commands, pluginCommands);
 
   if (!isTelegram) {
-    const lines = ["ℹ️ Slash commands", ""];
+    const lines = ["🦞 命令列表", ""];
     lines.push(formatCommandList(items));
     return {
       text: lines.join("\n").trim(),
@@ -887,7 +1083,7 @@ export function buildCommandsMessagePaginated(
   const endIndex = startIndex + COMMANDS_PER_PAGE;
   const pageItems = items.slice(startIndex, endIndex);
 
-  const lines = [`ℹ️ Commands (${currentPage}/${totalPages})`, ""];
+  const lines = [`🦞 命令 ${currentPage}/${totalPages}`, ""];
   lines.push(formatCommandList(pageItems));
 
   return {

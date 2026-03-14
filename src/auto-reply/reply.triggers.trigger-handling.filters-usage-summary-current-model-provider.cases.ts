@@ -69,9 +69,9 @@ export function registerTriggerHandlingUsageSummaryCases(params: {
           );
 
           const text = Array.isArray(res) ? res[0]?.text : res?.text;
-          expect(text).toContain("Model:");
+          expect(text).toContain("模型：");
           expect(text).toContain("OpenClaw");
-          expect(normalizeTestText(text ?? "")).toContain("Usage: Claude 80% left");
+          expect(normalizeTestText(text ?? "")).toContain("额度：");
           expect(usageMocks.loadProviderUsageSummary).toHaveBeenCalledWith(
             expect.objectContaining({ providers: ["anthropic"] }),
           );

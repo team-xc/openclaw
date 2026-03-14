@@ -182,8 +182,8 @@ describe("directive behavior", () => {
       expect(loadSessionStore(storePath)["agent:main:main"]?.fastMode).toBe(true);
 
       const statusText = await runCommand(home, "/status");
-      const optionsLine = statusText?.split("\n").find((line) => line.trim().startsWith("⚙️"));
-      expect(optionsLine).toContain("Fast: on");
+      const optionsLine = statusText?.split("\n").find((line) => line.includes("运行时："));
+      expect(optionsLine).toContain("快速：开启");
 
       const offText = await runCommand(home, "/fast off");
       expect(offText).toContain("Fast mode disabled");
@@ -199,7 +199,7 @@ describe("directive behavior", () => {
       const storePath = sessionStorePath(home);
 
       const offStatusText = replyText(await runElevatedCommand(home, "/elevated off\n/status"));
-      expect(offStatusText).toContain("Session: agent:main:main");
+      expect(offStatusText).toContain("会话：agent:main:main");
       assertElevatedOffStatusReply(offStatusText);
 
       const offLevelText = replyText(await runElevatedCommand(home, "/elevated"));
@@ -208,9 +208,9 @@ describe("directive behavior", () => {
 
       await runElevatedCommand(home, "/elevated on");
       const onStatusText = replyText(await runElevatedCommand(home, "/status"));
-      const optionsLine = onStatusText?.split("\n").find((line) => line.trim().startsWith("⚙️"));
+      const optionsLine = onStatusText?.split("\n").find((line) => line.includes("运行时："));
       expect(optionsLine).toBeTruthy();
-      expect(optionsLine).toContain("elevated");
+      expect(optionsLine).toContain("高级：开启");
 
       const store = loadSessionStore(storePath);
       expect(store["agent:main:main"]?.elevatedLevel).toBe("on");

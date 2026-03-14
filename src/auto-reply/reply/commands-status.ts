@@ -14,11 +14,7 @@ import type { OpenClawConfig } from "../../config/config.js";
 import { toAgentModelListLike } from "../../config/model-input.js";
 import type { SessionEntry, SessionScope } from "../../config/sessions.js";
 import { logVerbose } from "../../globals.js";
-import {
-  formatUsageWindowSummary,
-  loadProviderUsageSummary,
-  resolveUsageProviderId,
-} from "../../infra/provider-usage.js";
+import { loadProviderUsageSummary, resolveUsageProviderId } from "../../infra/provider-usage.js";
 import type { MediaUnderstandingDecision } from "../../media-understanding/types.js";
 import { normalizeGroupActivation } from "../group-activation.js";
 import { resolveSelectedAndActiveModel } from "../model-runtime.js";
@@ -28,6 +24,69 @@ import type { ReplyPayload } from "../types.js";
 import type { CommandContext } from "./commands-types.js";
 import { getFollowupQueueDepth, resolveQueueSettings } from "./queue.js";
 import { resolveSubagentLabel } from "./subagents-utils.js";
+
+function formatResetRemainingZh(targetMs?: number, now?: number): string | null {
+  if (!targetMs) {
+    return null;
+  }
+  const base = now ?? Date.now();
+  const diffMs = targetMs - base;
+  if (diffMs <= 0) {
+    return "现在";
+  }
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) {
+    return `${diffMins} 分钟`;
+  }
+  const hours = Math.floor(diffMins / 60);
+  const mins = diffMins % 60;
+  if (hours < 24) {
+    return mins > 0 ? `${hours} 小时 ${mins} 分钟` : `${hours} 小时`;
+  }
+  const days = Math.floor(hours / 24);
+  if (days < 7) {
+    return `${days} 天 ${hours % 24} 小时`;
+  }
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "numeric",
+    day: "numeric",
+  }).format(new Date(targetMs));
+}
+
+function formatUsageWindowSummaryZh(
+  snapshot: NonNullable<Awaited<ReturnType<typeof loadProviderUsageSummary>>["providers"][number]>,
+  opts?: { now?: number; maxWindows?: number; includeResets?: boolean },
+): string | null {
+  if (snapshot.error || snapshot.windows.length === 0) {
+    return null;
+  }
+  const now = opts?.now ?? Date.now();
+  const maxWindows =
+    typeof opts?.maxWindows === "number" && opts.maxWindows > 0
+      ? Math.min(opts.maxWindows, snapshot.windows.length)
+      : snapshot.windows.length;
+  const includeResets = opts?.includeResets ?? false;
+  const windows = snapshot.windows.slice(0, maxWindows);
+  const localizeWindowLabel = (label: string): string => {
+    const trimmed = label.trim();
+    const hourMatch = /^(\d+)h$/i.exec(trimmed);
+    if (hourMatch) {
+      return `${hourMatch[1]} 小时`;
+    }
+    const dayMatch = /^(\d+)d$/i.exec(trimmed);
+    if (dayMatch) {
+      return `${dayMatch[1]} 天`;
+    }
+    return trimmed;
+  };
+  const parts = windows.map((window) => {
+    const remaining = Math.max(0, Math.min(100, 100 - window.usedPercent));
+    const reset = includeResets ? formatResetRemainingZh(window.resetAt, now) : null;
+    const resetSuffix = reset ? ` 重置 ${reset}` : "";
+    return `${snapshot.displayName} ${localizeWindowLabel(window.label)} 剩余 ${remaining.toFixed(0)}%${resetSuffix}`;
+  });
+  return parts.join(" ");
+}
 
 export async function buildStatusReply(params: {
   cfg: OpenClawConfig;
@@ -95,13 +154,13 @@ export async function buildStatusReply(params: {
       });
       const usageEntry = usageSummary.providers[0];
       if (usageEntry && !usageEntry.error && usageEntry.windows.length > 0) {
-        const summaryLine = formatUsageWindowSummary(usageEntry, {
+        const summaryLine = formatUsageWindowSummaryZh(usageEntry, {
           now: Date.now(),
           maxWindows: 2,
           includeResets: true,
         });
         if (summaryLine) {
-          usageLine = `📊 Usage: ${summaryLine}`;
+          usageLine = `额度 ${summaryLine}`;
         }
       }
     } catch {
@@ -133,10 +192,10 @@ export async function buildStatusReply(params: {
           .map((entry) => resolveSubagentLabel(entry, ""))
           .filter(Boolean)
           .slice(0, 3);
-        const labelText = labels.length ? ` (${labels.join(", ")})` : "";
-        subagentsLine = `🤖 Subagents: ${active.length} active${labelText} · ${done} done`;
+        const labelText = labels.length ? ` ${labels.join(" ")}` : "";
+        subagentsLine = `子代理 ${active.length} 个运行中${labelText} 已完成 ${done} 个`;
       } else if (active.length > 0) {
-        subagentsLine = `🤖 Subagents: ${active.length} active`;
+        subagentsLine = `子代理 ${active.length} 个运行中`;
       }
     }
   }

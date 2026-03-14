@@ -76,19 +76,19 @@ describe("buildStatusMessage", () => {
     const normalized = normalizeTestText(text);
 
     expect(normalized).toContain("OpenClaw");
-    expect(normalized).toContain("Model: anthropic/pi:opus");
-    expect(normalized).toContain("api-key");
-    expect(normalized).toContain("Tokens: 1.2k in / 800 out");
-    expect(normalized).toContain("Cost: $0.0020");
-    expect(normalized).toContain("Context: 16k/32k (50%)");
-    expect(normalized).toContain("Compactions: 2");
-    expect(normalized).toContain("Session: agent:main:main");
-    expect(normalized).toContain("updated 10m ago");
-    expect(normalized).toContain("Runtime: direct");
-    expect(normalized).toContain("Think: medium");
-    expect(normalized).not.toContain("verbose");
-    expect(normalized).toContain("elevated");
-    expect(normalized).toContain("Queue: collect");
+    expect(normalized).toContain("模型 anthropic/pi:opus");
+    expect(normalized).toContain("认证 密钥");
+    expect(normalized).toContain("用量 1.2k 输入 / 800 输出");
+    expect(normalized).toContain("费用 $0.0020");
+    expect(normalized).toContain("上下文 16k/32k (50%)");
+    expect(normalized).toContain("压缩次数 2");
+    expect(normalized).toContain("会话 agent:main:main");
+    expect(normalized).toContain("10 分钟前更新");
+    expect(normalized).toContain("运行时 直连");
+    expect(normalized).toContain("思考 中");
+    expect(normalized).not.toContain("详细 ");
+    expect(normalized).toContain("高级 开启");
+    expect(normalized).toContain("队列 收集");
   });
 
   it("falls back to sessionEntry levels when resolved levels are not passed", () => {
@@ -108,9 +108,9 @@ describe("buildStatusMessage", () => {
     });
     const normalized = normalizeTestText(text);
 
-    expect(normalized).toContain("Think: high");
-    expect(normalized).toContain("verbose:full");
-    expect(normalized).toContain("Reasoning: on");
+    expect(normalized).toContain("思考 高");
+    expect(normalized).toContain("详细 完整");
+    expect(normalized).toContain("推理 开启");
   });
 
   it("shows fast mode when enabled", () => {
@@ -127,7 +127,24 @@ describe("buildStatusMessage", () => {
       queue: { mode: "collect", depth: 0 },
     });
 
-    expect(normalizeTestText(text)).toContain("Fast: on");
+    expect(normalizeTestText(text)).toContain("快速 开启");
+  });
+
+  it("localizes oauth auth labels in status output", () => {
+    const text = buildStatusMessage({
+      agent: {
+        model: "openai/gpt-5.4",
+      },
+      sessionEntry: {
+        sessionId: "oauth-auth",
+        updatedAt: 0,
+      },
+      sessionKey: "agent:main:main",
+      queue: { mode: "collect", depth: 0 },
+      modelAuth: "oauth (openai-codex:default)",
+    });
+
+    expect(normalizeTestText(text)).toContain("认证 OAuth (openai-codex:default)");
   });
 
   it("notes channel model overrides in status output", () => {
@@ -156,8 +173,8 @@ describe("buildStatusMessage", () => {
     });
     const normalized = normalizeTestText(text);
 
-    expect(normalized).toContain("Model: openai/gpt-4.1");
-    expect(normalized).toContain("channel override");
+    expect(normalized).toContain("模型 openai/gpt-4.1");
+    expect(normalized).toContain("频道覆盖");
   });
 
   it("shows 1M context window when anthropic context1m is enabled", () => {
@@ -187,7 +204,7 @@ describe("buildStatusMessage", () => {
       queue: { mode: "collect", depth: 0 },
     });
 
-    expect(normalizeTestText(text)).toContain("Context: 200k/1.0m");
+    expect(normalizeTestText(text)).toContain("上下文 200k/1.0m");
   });
 
   it("recomputes context window from the active model after switching away from a smaller session override", () => {
@@ -220,7 +237,7 @@ describe("buildStatusMessage", () => {
       queue: { mode: "collect", depth: 0 },
     });
 
-    expect(normalizeTestText(text)).toContain("Context: 1.0k/66k");
+    expect(normalizeTestText(text)).toContain("上下文 1.0k/66k");
   });
 
   it("uses per-agent sandbox config when config and session key are provided", () => {
@@ -239,7 +256,7 @@ describe("buildStatusMessage", () => {
       queue: { mode: "collect", depth: 0 },
     });
 
-    expect(normalizeTestText(text)).toContain("Runtime: docker/all");
+    expect(normalizeTestText(text)).toContain("运行时 容器/全部");
   });
 
   it("shows verbose/elevated labels only when enabled", () => {
@@ -254,8 +271,8 @@ describe("buildStatusMessage", () => {
       queue: { mode: "collect", depth: 0 },
     });
 
-    expect(text).toContain("verbose");
-    expect(text).toContain("elevated");
+    expect(text).toContain("详细 开启");
+    expect(text).toContain("高级 开启");
   });
 
   it("includes media understanding decisions when present", () => {
@@ -288,7 +305,7 @@ describe("buildStatusMessage", () => {
     });
 
     const normalized = normalizeTestText(text);
-    expect(normalized).toContain("Media: image ok (openai/gpt-5.2) · audio skipped (maxBytes)");
+    expect(normalized).toContain("媒体 图片 成功 openai/gpt-5.2 音频 跳过 maxBytes");
   });
 
   it("omits media line when all decisions are none", () => {
@@ -304,7 +321,7 @@ describe("buildStatusMessage", () => {
       ],
     });
 
-    expect(normalizeTestText(text)).not.toContain("Media:");
+    expect(normalizeTestText(text)).not.toContain("媒体：");
   });
 
   it("does not show elevated label when session explicitly disables it", () => {
@@ -318,9 +335,9 @@ describe("buildStatusMessage", () => {
       queue: { mode: "collect", depth: 0 },
     });
 
-    const optionsLine = text.split("\n").find((line) => line.trim().startsWith("⚙️"));
+    const optionsLine = text.split("\n").find((line) => line.includes("运行时 "));
     expect(optionsLine).toBeTruthy();
-    expect(optionsLine).not.toContain("elevated");
+    expect(optionsLine).not.toContain("高级 ");
   });
 
   it("shows selected model and active runtime model when they differ", () => {
@@ -349,9 +366,9 @@ describe("buildStatusMessage", () => {
     });
 
     const normalized = normalizeTestText(text);
-    expect(normalized).toContain("Model: openai/gpt-4.1-mini");
-    expect(normalized).toContain("Fallback: anthropic/claude-haiku-4-5");
-    expect(normalized).toContain("(rate limit)");
+    expect(normalized).toContain("模型 openai/gpt-4.1-mini");
+    expect(normalized).toContain("回退 anthropic/claude-haiku-4-5");
+    expect(normalized).toContain("原因 速率限制");
     expect(normalized).not.toContain(" - Reason:");
     expect(normalized).not.toContain("Active:");
     expect(normalized).toContain("di_123...abc");
@@ -380,8 +397,8 @@ describe("buildStatusMessage", () => {
     });
 
     const normalized = normalizeTestText(text);
-    expect(normalized).toContain("Model: openai/gpt-4.1-mini");
-    expect(normalized).not.toContain("Fallback:");
+    expect(normalized).toContain("模型 openai/gpt-4.1-mini");
+    expect(normalized).not.toContain("回退 ");
     expect(normalized).not.toContain("(rate limit)");
   });
 
@@ -405,7 +422,7 @@ describe("buildStatusMessage", () => {
     });
 
     const normalized = normalizeTestText(text);
-    expect(normalized).not.toContain("Fallback:");
+    expect(normalized).not.toContain("回退 ");
   });
 
   it("keeps provider prefix from configured model", () => {
@@ -418,7 +435,7 @@ describe("buildStatusMessage", () => {
       modelAuth: "api-key",
     });
 
-    expect(normalizeTestText(text)).toContain("Model: google-antigravity/claude-sonnet-4-5");
+    expect(normalizeTestText(text)).toContain("模型 google-antigravity/claude-sonnet-4-5");
   });
 
   it("handles missing agent config gracefully", () => {
@@ -430,9 +447,9 @@ describe("buildStatusMessage", () => {
     });
 
     const normalized = normalizeTestText(text);
-    expect(normalized).toContain("Model:");
-    expect(normalized).toContain("Context:");
-    expect(normalized).toContain("Queue: collect");
+    expect(normalized).toContain("模型 ");
+    expect(normalized).toContain("上下文 ");
+    expect(normalized).toContain("队列 收集");
   });
 
   it("includes group activation for group sessions", () => {
@@ -450,7 +467,7 @@ describe("buildStatusMessage", () => {
       modelAuth: "api-key",
     });
 
-    expect(text).toContain("Activation: always");
+    expect(text).toContain("激活 始终");
   });
 
   it("shows queue details when overridden", () => {
@@ -470,7 +487,7 @@ describe("buildStatusMessage", () => {
       modelAuth: "api-key",
     });
 
-    expect(text).toContain("Queue: collect (depth 3 · debounce 2s · cap 5 · drop old)");
+    expect(text).toContain("队列 收集 深度 3 防抖 2 秒 上限 5 丢弃 旧消息");
   });
 
   it("inserts usage summary beneath context line", () => {
@@ -480,14 +497,14 @@ describe("buildStatusMessage", () => {
       sessionKey: "agent:main:main",
       sessionScope: "per-sender",
       queue: { mode: "collect", depth: 0 },
-      usageLine: "📊 Usage: Claude 80% left (5h)",
+      usageLine: "额度 Claude 5h 剩余 80%",
       modelAuth: "api-key",
     });
 
     const lines = normalizeTestText(text).split("\n");
-    const contextIndex = lines.findIndex((line) => line.includes("Context:"));
+    const contextIndex = lines.findIndex((line) => line.includes("上下文 "));
     expect(contextIndex).toBeGreaterThan(-1);
-    expect(lines[contextIndex + 1]).toContain("Usage: Claude 80% left (5h)");
+    expect(lines[contextIndex + 1]).toContain("额度 Claude 5h 剩余 80%");
   });
 
   it("hides cost when not using an API key", () => {
@@ -519,7 +536,7 @@ describe("buildStatusMessage", () => {
       modelAuth: "oauth",
     });
 
-    expect(text).not.toContain("💵 Cost:");
+    expect(text).not.toContain("费用 ");
   });
 
   function writeTranscriptUsageLog(params: {
@@ -613,7 +630,7 @@ describe("buildStatusMessage", () => {
           sessionKey: "agent:main:main",
         });
 
-        expect(normalizeTestText(text)).toContain("Context: 1.0k/32k");
+        expect(normalizeTestText(text)).toContain("上下文 1.0k/32k");
       },
       { prefix: "openclaw-status-" },
     );
@@ -634,7 +651,7 @@ describe("buildStatusMessage", () => {
           sessionKey: "agent:worker1:telegram:12345",
         });
 
-        expect(normalizeTestText(text)).toContain("Context: 1.0k/32k");
+        expect(normalizeTestText(text)).toContain("上下文 1.0k/32k");
       },
       { prefix: "openclaw-status-" },
     );
@@ -676,7 +693,7 @@ describe("buildStatusMessage", () => {
           modelAuth: "api-key",
         });
 
-        expect(normalizeTestText(text)).toContain("Context: 1.2k/32k");
+        expect(normalizeTestText(text)).toContain("上下文 1.2k/32k");
       },
       { prefix: "openclaw-status-" },
     );
@@ -688,12 +705,12 @@ describe("buildCommandsMessage", () => {
     const text = buildCommandsMessage({
       commands: { config: false, debug: false },
     } as unknown as OpenClawConfig);
-    expect(text).toContain("ℹ️ Slash commands");
-    expect(text).toContain("Status");
-    expect(text).toContain("/commands - List all slash commands.");
-    expect(text).toContain("/skill - Run a skill by name.");
-    expect(text).toContain("/think (/thinking, /t) - Set thinking level.");
-    expect(text).toContain("/compact - Compact the session context.");
+    expect(text).toContain("🦞 命令列表");
+    expect(text).toContain("状态");
+    expect(text).toContain("/commands 查看完整命令列表");
+    expect(text).toContain("/skill 运行技能");
+    expect(text).toContain("/think /thinking /t 设置思考等级");
+    expect(text).toContain("/compact 压缩会话上下文");
     expect(text).not.toContain("/config");
     expect(text).not.toContain("/debug");
   });
@@ -711,7 +728,7 @@ describe("buildCommandsMessage", () => {
         },
       ],
     );
-    expect(text).toContain("/demo_skill - Demo skill");
+    expect(text).toContain("/demo_skill Demo skill");
   });
 });
 
@@ -720,7 +737,7 @@ describe("buildHelpMessage", () => {
     const text = buildHelpMessage({
       commands: { config: false, debug: false },
     } as unknown as OpenClawConfig);
-    expect(text).toContain("Skills");
+    expect(text).toContain("技能");
     expect(text).toContain("/skill <name> [input]");
     expect(text).not.toContain("/config");
     expect(text).not.toContain("/debug");
@@ -740,9 +757,9 @@ describe("buildCommandsMessagePaginated", () => {
       undefined,
       { surface: "telegram", page: 1 },
     );
-    expect(result.text).toContain("ℹ️ Commands (1/");
-    expect(result.text).toContain("Session");
-    expect(result.text).toContain("/stop - Stop the current run.");
+    expect(result.text).toContain("🦞 命令 1/");
+    expect(result.text).toContain("会话");
+    expect(result.text).toContain("/stop 中断当前任务");
   });
 
   it("includes plugin commands in the paginated list", () => {
@@ -756,7 +773,7 @@ describe("buildCommandsMessagePaginated", () => {
       undefined,
       { surface: "telegram", page: 99 },
     );
-    expect(result.text).toContain("Plugins");
-    expect(result.text).toContain("/plugin_cmd (demo-plugin) - Plugin command");
+    expect(result.text).toContain("插件");
+    expect(result.text).toContain("/plugin_cmd demo-plugin Plugin command");
   });
 });
