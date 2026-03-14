@@ -1377,6 +1377,7 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
     const sessionKey = "agent:main:telegram:dm:user-overrides";
     const existingSessionId = "existing-session-overrides";
     const overrides = {
+      fastMode: true,
       verboseLevel: "on",
       thinkingLevel: "high",
       reasoningLevel: "low",

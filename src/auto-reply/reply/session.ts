@@ -233,6 +233,7 @@ export async function initSessionState(params: {
   let resetTriggered = false;
 
   let persistedThinking: string | undefined;
+  let persistedFast: boolean | undefined;
   let persistedVerbose: string | undefined;
   let persistedReasoning: string | undefined;
   let persistedTtsAuto: TtsAutoMode | undefined;
@@ -369,6 +370,7 @@ export async function initSessionState(params: {
     systemSent = entry.systemSent ?? false;
     abortedLastRun = entry.abortedLastRun ?? false;
     persistedThinking = entry.thinkingLevel;
+    persistedFast = entry.fastMode;
     persistedVerbose = entry.verboseLevel;
     persistedReasoning = entry.reasoningLevel;
     persistedTtsAuto = entry.ttsAuto;
@@ -381,10 +383,11 @@ export async function initSessionState(params: {
     systemSent = false;
     abortedLastRun = false;
     // When a reset trigger (/new, /reset) starts a new session, carry over
-    // user-set behavior overrides (verbose, thinking, reasoning, ttsAuto)
+    // user-set behavior overrides (thinking, fast, verbose, reasoning, ttsAuto)
     // so the user doesn't have to re-enable them every time.
     if (resetTriggered && entry) {
       persistedThinking = entry.thinkingLevel;
+      persistedFast = entry.fastMode;
       persistedVerbose = entry.verboseLevel;
       persistedReasoning = entry.reasoningLevel;
       persistedTtsAuto = entry.ttsAuto;
@@ -433,8 +436,9 @@ export async function initSessionState(params: {
     updatedAt: Date.now(),
     systemSent,
     abortedLastRun,
-    // Persist previously stored thinking/verbose levels when present.
+    // Persist previously stored behavior overrides when present.
     thinkingLevel: persistedThinking ?? baseEntry?.thinkingLevel,
+    fastMode: persistedFast ?? baseEntry?.fastMode,
     verboseLevel: persistedVerbose ?? baseEntry?.verboseLevel,
     reasoningLevel: persistedReasoning ?? baseEntry?.reasoningLevel,
     ttsAuto: persistedTtsAuto ?? baseEntry?.ttsAuto,
