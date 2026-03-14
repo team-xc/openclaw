@@ -57,6 +57,74 @@ import { assertValidParams } from "./validation.js";
 
 const MAX_CONFIG_ISSUES_IN_ERROR_MESSAGE = 3;
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function collectTelegramTopLevelUnsetPathsFromRaw(raw: unknown): string[][] {
+  const config = asRecord(raw);
+  const channels = asRecord(config?.channels);
+  const telegram = asRecord(channels?.telegram);
+  const accounts = asRecord(telegram?.accounts);
+  if (!telegram || !accounts || Object.keys(accounts).length === 0) {
+    return [];
+  }
+  if (Object.prototype.hasOwnProperty.call(accounts, "default")) {
+    return [];
+  }
+
+  const unsetPaths: string[][] = [];
+  if (!Object.prototype.hasOwnProperty.call(telegram, "dmPolicy")) {
+    unsetPaths.push(["channels", "telegram", "dmPolicy"]);
+  }
+  if (!Object.prototype.hasOwnProperty.call(telegram, "groupPolicy")) {
+    unsetPaths.push(["channels", "telegram", "groupPolicy"]);
+  }
+  if (!Object.prototype.hasOwnProperty.call(telegram, "streaming")) {
+    unsetPaths.push(["channels", "telegram", "streaming"]);
+  }
+  return unsetPaths;
+}
+
+function mergeWriteOptionsWithUnsetPaths(
+  writeOptions: Awaited<ReturnType<typeof readConfigFileSnapshotForWrite>>["writeOptions"],
+  unsetPaths: string[][],
+) {
+  if (unsetPaths.length === 0) {
+    return writeOptions;
+  }
+  return {
+    ...writeOptions,
+    unsetPaths: [...(writeOptions.unsetPaths ?? []), ...unsetPaths],
+  };
+}
+
+function prunePathsFromConfigObject(
+  config: OpenClawConfig,
+  unsetPaths: string[][],
+): OpenClawConfig {
+  if (unsetPaths.length === 0) {
+    return config;
+  }
+  const next = structuredClone(config) as OpenClawConfig;
+  for (const unsetPath of unsetPaths) {
+    const [root, section, key] = unsetPath;
+    if (root !== "channels" || section !== "telegram" || typeof key !== "string") {
+      continue;
+    }
+    const channels = asRecord(next.channels);
+    const telegram = asRecord(channels?.telegram);
+    if (!telegram) {
+      continue;
+    }
+    delete telegram[key];
+  }
+  return next;
+}
+
 function requireConfigBaseHash(
   params: unknown,
   snapshot: Awaited<ReturnType<typeof readConfigFileSnapshot>>,
@@ -136,7 +204,7 @@ function parseValidateConfigFromRawOrRespond(
   requestName: string,
   snapshot: Awaited<ReturnType<typeof readConfigFileSnapshot>>,
   respond: RespondFn,
-): { config: OpenClawConfig; schema: ConfigSchemaResponse } | null {
+): { config: OpenClawConfig; schema: ConfigSchemaResponse; unsetPaths: string[][] } | null {
   const rawValue = parseRawConfigOrRespond(params, requestName, respond);
   if (!rawValue) {
     return null;
@@ -167,7 +235,12 @@ function parseValidateConfigFromRawOrRespond(
     );
     return null;
   }
-  return { config: validated.config, schema };
+  const unsetPaths = collectTelegramTopLevelUnsetPathsFromRaw(parsedRes.parsed);
+  return {
+    config: prunePathsFromConfigObject(validated.config, unsetPaths),
+    schema,
+    unsetPaths,
+  };
 }
 
 function summarizeConfigValidationIssues(issues: ReadonlyArray<ConfigValidationIssue>): string {
@@ -336,7 +409,10 @@ export const configHandlers: GatewayRequestHandlers = {
     if (!parsed) {
       return;
     }
-    await writeConfigFile(parsed.config, writeOptions);
+    await writeConfigFile(
+      parsed.config,
+      mergeWriteOptionsWithUnsetPaths(writeOptions, parsed.unsetPaths),
+    );
     respond(
       true,
       {
@@ -486,7 +562,10 @@ export const configHandlers: GatewayRequestHandlers = {
     context?.logGateway?.info(
       `config.apply write ${formatControlPlaneActor(actor)} changedPaths=${summarizeChangedPaths(changedPaths)} restartReason=config.apply`,
     );
-    await writeConfigFile(parsed.config, writeOptions);
+    await writeConfigFile(
+      parsed.config,
+      mergeWriteOptionsWithUnsetPaths(writeOptions, parsed.unsetPaths),
+    );
 
     const { sessionKey, note, restartDelayMs, deliveryContext, threadId } =
       resolveConfigRestartRequest(params);

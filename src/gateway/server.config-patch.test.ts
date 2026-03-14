@@ -104,6 +104,83 @@ describe("gateway config methods", () => {
     expect(error?.details?.issues?.[0]?.path).toBe("gateway.bind");
   });
 
+  it("preserves omitted Telegram multi-account top-level defaults in raw config.set writes", async () => {
+    const { createConfigIO } = await import("../config/config.js");
+    const current = await rpcReq<{
+      hash?: string;
+    }>(requireWs(), "config.get", {});
+    expect(current.ok).toBe(true);
+    expect(typeof current.payload?.hash).toBe("string");
+
+    const raw = JSON.stringify(
+      {
+        gateway: {
+          mode: "local",
+        },
+        channels: {
+          telegram: {
+            enabled: true,
+            defaultAccount: "chat",
+            accounts: {
+              chat: {
+                enabled: true,
+                botToken: "token-chat",
+                dmPolicy: "allowlist",
+                allowFrom: [123],
+                groupPolicy: "disabled",
+                streaming: "partial",
+              },
+              debug: {
+                enabled: true,
+                botToken: "token-debug",
+                dmPolicy: "allowlist",
+                allowFrom: [123],
+                groupPolicy: "disabled",
+                streaming: "partial",
+              },
+            },
+          },
+        },
+      },
+      null,
+      2,
+    );
+
+    const res = await rpcReq<{ ok?: boolean }>(requireWs(), "config.set", {
+      raw,
+      baseHash: current.payload?.hash,
+    });
+
+    expect(res.ok).toBe(true);
+    const persisted = JSON.parse(await fs.readFile(createConfigIO().configPath, "utf-8")) as {
+      channels?: {
+        telegram?: Record<string, unknown>;
+      };
+    };
+    expect(persisted.channels?.telegram).toEqual({
+      enabled: true,
+      defaultAccount: "chat",
+      accounts: {
+        chat: {
+          enabled: true,
+          botToken: "token-chat",
+          dmPolicy: "allowlist",
+          allowFrom: [123],
+          groupPolicy: "disabled",
+          streaming: "partial",
+        },
+        debug: {
+          enabled: true,
+          botToken: "token-debug",
+          dmPolicy: "allowlist",
+          allowFrom: [123],
+          groupPolicy: "disabled",
+          streaming: "partial",
+        },
+      },
+    });
+  });
+
   it("returns a path-scoped config schema lookup", async () => {
     const res = await rpcReq<{
       path: string;
