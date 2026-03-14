@@ -1668,7 +1668,9 @@ export async function loadAndMaybeMigrateDoctorConfig(params: {
   }
 
   let snapshot = await readConfigFileSnapshot();
-  const baseCfg = snapshot.config ?? {};
+  // Use the resolved source config for doctor migrations and warnings so
+  // runtime defaults do not get mistaken for user-authored legacy keys.
+  const baseCfg = (snapshot.valid ? snapshot.resolved : snapshot.config) ?? {};
   let cfg: OpenClawConfig = baseCfg;
   let candidate = structuredClone(baseCfg);
   let pendingChanges = false;

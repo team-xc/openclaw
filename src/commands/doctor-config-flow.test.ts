@@ -587,6 +587,67 @@ describe("doctor config flow", () => {
     expect(cfg.channels.telegram.allowFrom).toEqual(["12345"]);
   });
 
+  it("does not suggest accounts.default migration for valid multi-account telegram config", async () => {
+    const noteSpy = vi.spyOn(noteModule, "note").mockImplementation(() => {});
+    try {
+      const result = await runDoctorConfigWithInput({
+        config: {
+          channels: {
+            telegram: {
+              enabled: true,
+              defaultAccount: "chat",
+              accounts: {
+                chat: {
+                  botToken: "chat-token",
+                  allowFrom: ["12345"],
+                  dmPolicy: "allowlist",
+                  groupPolicy: "disabled",
+                },
+                debug: {
+                  botToken: "debug-token",
+                  allowFrom: ["12345"],
+                  dmPolicy: "allowlist",
+                  groupPolicy: "disabled",
+                },
+              },
+            },
+          },
+        },
+        run: loadAndMaybeMigrateDoctorConfig,
+      });
+
+      const telegram = (result.cfg as { channels: { telegram: Record<string, unknown> } }).channels
+        .telegram;
+      expect(telegram.defaultAccount).toBe("chat");
+      expect(telegram.accounts).toEqual({
+        chat: {
+          botToken: "chat-token",
+          allowFrom: ["12345"],
+          dmPolicy: "allowlist",
+          groupPolicy: "disabled",
+        },
+        debug: {
+          botToken: "debug-token",
+          allowFrom: ["12345"],
+          dmPolicy: "allowlist",
+          groupPolicy: "disabled",
+        },
+      });
+      expect(telegram).not.toHaveProperty("dmPolicy");
+      expect(telegram).not.toHaveProperty("groupPolicy");
+      expect(
+        noteSpy.mock.calls.every(
+          (call) =>
+            !String(call[0]).includes(
+              "Moved channels.telegram single-account top-level values into channels.telegram.accounts.default.",
+            ) && !String(call[0]).includes("channels.telegram.accounts.default.groupPolicy"),
+        ),
+      ).toBe(true);
+    } finally {
+      noteSpy.mockRestore();
+    }
+  });
+
   it("migrates legacy toolsBySender keys to typed id entries on repair", async () => {
     const result = await runDoctorConfigWithInput({
       repair: true,
