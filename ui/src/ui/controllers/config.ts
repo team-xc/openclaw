@@ -4,6 +4,7 @@ import type { JsonSchema } from "../views/config-form.shared.ts";
 import { coerceFormValues } from "./config/form-coerce.ts";
 import {
   cloneConfigObject,
+  normalizeConfigFormForSerialization,
   removePathValue,
   serializeConfigForm,
   setPathValue,
@@ -82,12 +83,12 @@ export function applyConfigSnapshot(state: ConfigState, snapshot: ConfigSnapshot
     typeof snapshot.raw === "string"
       ? snapshot.raw
       : snapshot.config && typeof snapshot.config === "object"
-        ? serializeConfigForm(snapshot.config)
+        ? serializeConfigForm(normalizeConfigFormForSerialization(snapshot.config))
         : state.configRaw;
   if (!state.configFormDirty || state.configFormMode === "raw") {
     state.configRaw = rawFromSnapshot;
   } else if (state.configForm) {
-    state.configRaw = serializeConfigForm(state.configForm);
+    state.configRaw = serializeConfigForm(normalizeConfigFormForSerialization(state.configForm));
   } else {
     state.configRaw = rawFromSnapshot;
   }
@@ -124,7 +125,7 @@ function serializeFormForSubmit(state: ConfigState): string {
   const form = schema
     ? (coerceFormValues(state.configForm, schema) as Record<string, unknown>)
     : state.configForm;
-  return serializeConfigForm(form);
+  return serializeConfigForm(normalizeConfigFormForSerialization(form));
 }
 
 export async function saveConfig(state: ConfigState) {
@@ -204,7 +205,7 @@ export function updateConfigFormValue(
   state.configForm = base;
   state.configFormDirty = true;
   if (state.configFormMode === "form") {
-    state.configRaw = serializeConfigForm(base);
+    state.configRaw = serializeConfigForm(normalizeConfigFormForSerialization(base));
   }
 }
 
@@ -214,7 +215,7 @@ export function removeConfigFormValue(state: ConfigState, path: Array<string | n
   state.configForm = base;
   state.configFormDirty = true;
   if (state.configFormMode === "form") {
-    state.configRaw = serializeConfigForm(base);
+    state.configRaw = serializeConfigForm(normalizeConfigFormForSerialization(base));
   }
 }
 

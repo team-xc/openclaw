@@ -5,6 +5,49 @@ export function cloneConfigObject<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+/**
+ * The config form is seeded from normalized gateway config, which includes
+ * Telegram top-level defaults like dmPolicy/groupPolicy/streaming even when the
+ * user's raw multi-account config intentionally omits them. If we serialize
+ * those defaults back into the file, Doctor treats them as legacy single-account
+ * keys and keeps offering a migration on every restart.
+ */
+function pruneRedundantTelegramMultiAccountDefaults(config: Record<string, unknown>) {
+  const channels = asRecord(config.channels);
+  const telegram = asRecord(channels?.telegram);
+  const accounts = asRecord(telegram?.accounts);
+  if (!telegram || !accounts || Object.keys(accounts).length === 0) {
+    return;
+  }
+  if (Object.hasOwn(accounts, "default")) {
+    return;
+  }
+  if (telegram.dmPolicy === "pairing") {
+    delete telegram.dmPolicy;
+  }
+  if (telegram.groupPolicy === "allowlist") {
+    delete telegram.groupPolicy;
+  }
+  if (telegram.streaming === "partial") {
+    delete telegram.streaming;
+  }
+}
+
+export function normalizeConfigFormForSerialization(
+  form: Record<string, unknown>,
+): Record<string, unknown> {
+  const next = cloneConfigObject(form);
+  pruneRedundantTelegramMultiAccountDefaults(next);
+  return next;
+}
+
 export function serializeConfigForm(form: Record<string, unknown>): string {
   return `${JSON.stringify(form, null, 2).trimEnd()}\n`;
 }

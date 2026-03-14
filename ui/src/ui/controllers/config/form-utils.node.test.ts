@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { JsonSchema } from "../../views/config-form.shared.ts";
 import { coerceFormValues } from "./form-coerce.ts";
-import { cloneConfigObject, serializeConfigForm, setPathValue } from "./form-utils.ts";
+import {
+  cloneConfigObject,
+  normalizeConfigFormForSerialization,
+  serializeConfigForm,
+  setPathValue,
+} from "./form-utils.ts";
 
 /**
  * Minimal model provider schema matching the Zod-generated JSON Schema for
@@ -451,5 +456,106 @@ describe("coerceFormValues", () => {
     const form = { flag: "true" };
     const coerced = coerceFormValues(form, schema) as Record<string, unknown>;
     expect(coerced.flag).toBe(true);
+  });
+});
+
+describe("normalizeConfigFormForSerialization", () => {
+  it("drops redundant Telegram multi-account defaults when accounts.default is absent", () => {
+    const normalized = normalizeConfigFormForSerialization({
+      channels: {
+        telegram: {
+          enabled: true,
+          defaultAccount: "chat",
+          dmPolicy: "pairing",
+          groupPolicy: "allowlist",
+          streaming: "partial",
+          accounts: {
+            chat: {
+              dmPolicy: "allowlist",
+            },
+            debug: {
+              dmPolicy: "allowlist",
+            },
+          },
+        },
+      },
+    });
+
+    expect(normalized).toEqual({
+      channels: {
+        telegram: {
+          enabled: true,
+          defaultAccount: "chat",
+          accounts: {
+            chat: {
+              dmPolicy: "allowlist",
+            },
+            debug: {
+              dmPolicy: "allowlist",
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("preserves Telegram top-level values when accounts.default exists", () => {
+    const normalized = normalizeConfigFormForSerialization({
+      channels: {
+        telegram: {
+          dmPolicy: "pairing",
+          groupPolicy: "allowlist",
+          streaming: "partial",
+          accounts: {
+            default: {
+              botToken: "token",
+            },
+          },
+        },
+      },
+    });
+
+    expect(normalized).toEqual({
+      channels: {
+        telegram: {
+          dmPolicy: "pairing",
+          groupPolicy: "allowlist",
+          streaming: "partial",
+          accounts: {
+            default: {
+              botToken: "token",
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it("preserves non-default Telegram top-level values in multi-account configs", () => {
+    const normalized = normalizeConfigFormForSerialization({
+      channels: {
+        telegram: {
+          dmPolicy: "allowlist",
+          groupPolicy: "disabled",
+          streaming: "block",
+          accounts: {
+            chat: {},
+          },
+        },
+      },
+    });
+
+    expect(normalized).toEqual({
+      channels: {
+        telegram: {
+          dmPolicy: "allowlist",
+          groupPolicy: "disabled",
+          streaming: "block",
+          accounts: {
+            chat: {},
+          },
+        },
+      },
+    });
   });
 });
