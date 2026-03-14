@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fetchWithSsrFGuard, withStrictGuardedFetchMode } from "../infra/net/fetch-guard.js";
+import { getProxyUrlFromFetch } from "../infra/net/proxy-fetch.js";
 import type { LookupFn, SsrFPolicy } from "../infra/net/ssrf.js";
 import { detectMime, extensionForMime } from "./mime.js";
 import { readResponseWithLimit } from "./read-response-with-limit.js";
@@ -98,6 +99,9 @@ export async function fetchRemoteMedia(options: FetchMediaOptions): Promise<Fetc
   let finalUrl = url;
   let release: (() => Promise<void>) | null = null;
   try {
+    const hasExplicitProxyFetch = Boolean(
+      fetchImpl && getProxyUrlFromFetch(fetchImpl as typeof fetch),
+    );
     const result = await fetchWithSsrFGuard(
       withStrictGuardedFetchMode({
         url,
@@ -106,6 +110,9 @@ export async function fetchRemoteMedia(options: FetchMediaOptions): Promise<Fetc
         maxRedirects,
         policy: ssrfPolicy,
         lookupFn,
+        // Explicit proxy fetches already own transport routing. Injecting a pinned
+        // dispatcher here overrides that proxy path and can break media downloads.
+        ...(hasExplicitProxyFetch ? { pinDns: false } : {}),
       }),
     );
     res = result.response;

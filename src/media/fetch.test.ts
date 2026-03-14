@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { PROXY_FETCH_PROXY_URL } from "../infra/net/proxy-fetch.js";
 import { fetchRemoteMedia } from "./fetch.js";
 
 function makeStream(chunks: Uint8Array[]) {
@@ -97,5 +98,31 @@ describe("fetchRemoteMedia", () => {
       }),
     ).rejects.toThrow(/private|internal|blocked/i);
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("preserves explicit proxy fetch ownership by skipping dispatcher pinning", async () => {
+    const lookupFn = vi.fn(async () => [
+      { address: "93.184.216.34", family: 4 },
+    ]) as unknown as LookupFn;
+    const fetchImpl = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(
+        (init as (RequestInit & { dispatcher?: unknown }) | undefined)?.dispatcher,
+      ).toBeUndefined();
+      return new Response(makeStream([new Uint8Array([1, 2, 3])]), { status: 200 });
+    }) as typeof fetch & { [PROXY_FETCH_PROXY_URL]?: string };
+    Object.defineProperty(fetchImpl, PROXY_FETCH_PROXY_URL, {
+      value: "http://proxy.test:8080",
+    });
+
+    const result = await fetchRemoteMedia({
+      url: "https://example.com/file.bin",
+      fetchImpl,
+      lookupFn,
+      maxBytes: 10,
+    });
+
+    expect(result.buffer).toEqual(Buffer.from([1, 2, 3]));
+    expect(lookupFn).toHaveBeenCalled();
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });

@@ -3,6 +3,7 @@ import { Agent, EnvHttpProxyAgent, ProxyAgent, fetch as undiciFetch } from "undi
 import type { TelegramNetworkConfig } from "../config/types.telegram.js";
 import { resolveFetch } from "../infra/fetch.js";
 import { hasEnvHttpProxyConfigured } from "../infra/net/proxy-env.js";
+import { PROXY_FETCH_PROXY_URL } from "../infra/net/proxy-fetch.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import {
   resolveTelegramAutoSelectFamilyDecision,
@@ -39,6 +40,10 @@ type LookupFunction = (
   options: number | dns.LookupOneOptions | dns.LookupAllOptions | undefined,
   callback: LookupCallback,
 ) => void;
+
+type ProxyTaggedFetch = typeof fetch & {
+  [PROXY_FETCH_PROXY_URL]?: string;
+};
 
 const FALLBACK_RETRY_ERROR_CODES = [
   "ETIMEDOUT",
@@ -389,7 +394,7 @@ export function resolveTelegramFetch(
     return stickyIpv4Dispatcher;
   };
 
-  return (async (input: RequestInfo | URL, init?: RequestInit) => {
+  const resolvedFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const callerProvidedDispatcher = Boolean(
       (init as RequestInitWithDispatcher | undefined)?.dispatcher,
     );
@@ -420,5 +425,16 @@ export function resolveTelegramFetch(
       }
       throw err;
     }
-  }) as typeof fetch;
+  }) as ProxyTaggedFetch;
+
+  if (explicitProxyUrl) {
+    Object.defineProperty(resolvedFetch, PROXY_FETCH_PROXY_URL, {
+      value: explicitProxyUrl,
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
+  }
+
+  return resolvedFetch;
 }

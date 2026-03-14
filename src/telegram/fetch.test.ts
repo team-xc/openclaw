@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveFetch } from "../infra/fetch.js";
 import { resolveTelegramFetch } from "./fetch.js";
+import { getProxyUrlFromFetch } from "./proxy.js";
 
 const setDefaultResultOrder = vi.hoisted(() => vi.fn());
 const setDefaultAutoSelectFamily = vi.hoisted(() => vi.fn());
@@ -221,6 +222,7 @@ describe("resolveTelegramFetch", () => {
 
     await resolved("https://api.telegram.org/botx/getMe");
 
+    expect(getProxyUrlFromFetch(resolved)).toBe("http://127.0.0.1:7890");
     expect(ProxyAgentCtor).toHaveBeenCalledTimes(1);
     expect(EnvHttpProxyAgentCtor).not.toHaveBeenCalled();
     expect(AgentCtor).not.toHaveBeenCalled();
