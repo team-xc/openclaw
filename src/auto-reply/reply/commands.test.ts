@@ -145,34 +145,20 @@ function buildParams(commandBody: string, cfg: OpenClawConfig, ctxOverrides?: Pa
 }
 
 describe("handleCommands /quota", () => {
-  it("matches /usage behavior for usage footer changes", async () => {
+  it("passes through /quota without invoking built-in logic", async () => {
     const cfg = { commands: { text: true } } as OpenClawConfig;
-    const usageResult = await handleCommands(buildParams("/usage tokens", cfg));
-    const quotaResult = await handleCommands(buildParams("/quota tokens", cfg));
+    const quotaResult = await handleCommands(buildParams("/quota", cfg));
 
-    expect(quotaResult.shouldContinue).toBe(false);
-    expect(quotaResult.reply?.text).toBe(usageResult.reply?.text);
+    expect(quotaResult.shouldContinue).toBe(true);
+    expect(quotaResult.reply).toBeUndefined();
   });
 
-  it("matches /usage behavior for cost summaries", async () => {
+  it("passes through /quota arguments without invoking built-in logic", async () => {
     const cfg = { commands: { text: true } } as OpenClawConfig;
-    loadSessionCostSummaryMock.mockResolvedValue({
-      totalCost: 1.23,
-      totalTokens: 4567,
-      missingCostEntries: 0,
-    });
-    loadCostUsageSummaryMock.mockResolvedValue({
-      daily: [
-        { date: new Date().toLocaleDateString("en-CA"), totalCost: 0.45, missingCostEntries: 0 },
-      ],
-      totals: { totalCost: 3.21, missingCostEntries: 0 },
-    });
-
-    const usageResult = await handleCommands(buildParams("/usage cost", cfg));
     const quotaResult = await handleCommands(buildParams("/quota cost", cfg));
 
-    expect(quotaResult.shouldContinue).toBe(false);
-    expect(quotaResult.reply?.text).toBe(usageResult.reply?.text);
+    expect(quotaResult.shouldContinue).toBe(true);
+    expect(quotaResult.reply).toBeUndefined();
   });
 });
 

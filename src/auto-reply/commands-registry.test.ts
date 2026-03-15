@@ -216,8 +216,7 @@ describe("commands registry", () => {
       textAliases: ["/quota"],
       category: "options",
     });
-    const modeArg = quota?.args?.find((arg) => arg.name === "mode");
-    expect(modeArg?.choices).toEqual(["off", "tokens", "full", "cost"]);
+    expect(quota?.args).toBeUndefined();
   });
 
   it("detects known text commands", () => {

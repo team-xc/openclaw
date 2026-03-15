@@ -491,18 +491,9 @@ function buildChatCommands(): ChatCommandDefinition[] {
     defineChatCommand({
       key: "quota",
       nativeName: "quota",
-      description: "Usage footer or cost summary.",
+      description: "Ask the agent about quota.",
       textAlias: "/quota",
       category: "options",
-      args: [
-        {
-          name: "mode",
-          description: "off, tokens, full, or cost",
-          type: "string",
-          choices: ["off", "tokens", "full", "cost"],
-        },
-      ],
-      argsMenu: "auto",
     }),
     defineChatCommand({
       key: "stop",
