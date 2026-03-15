@@ -489,6 +489,22 @@ function buildChatCommands(): ChatCommandDefinition[] {
       argsMenu: "auto",
     }),
     defineChatCommand({
+      key: "quota",
+      nativeName: "quota",
+      description: "Usage footer or cost summary.",
+      textAlias: "/quota",
+      category: "options",
+      args: [
+        {
+          name: "mode",
+          description: "off, tokens, full, or cost",
+          type: "string",
+          choices: ["off", "tokens", "full", "cost"],
+        },
+      ],
+      argsMenu: "auto",
+    }),
+    defineChatCommand({
       key: "stop",
       nativeName: "stop",
       description: "Stop the current run.",

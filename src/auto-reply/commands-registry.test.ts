@@ -209,6 +209,17 @@ describe("commands registry", () => {
     expect(modeArg?.choices).toEqual(["status", "on", "off"]);
   });
 
+  it("registers quota as a first-class options command", () => {
+    const quota = listChatCommands().find((command) => command.key === "quota");
+    expect(quota).toMatchObject({
+      nativeName: "quota",
+      textAliases: ["/quota"],
+      category: "options",
+    });
+    const modeArg = quota?.args?.find((arg) => arg.name === "mode");
+    expect(modeArg?.choices).toEqual(["off", "tokens", "full", "cost"]);
+  });
+
   it("detects known text commands", () => {
     const detection = getCommandDetection();
     expect(detection.exact.has("/commands")).toBe(true);
@@ -261,6 +272,7 @@ describe("commands registry", () => {
 
   it("normalizes telegram-style command mentions for the current bot", () => {
     expect(normalizeCommandBody("/help@openclaw", { botUsername: "openclaw" })).toBe("/help");
+    expect(normalizeCommandBody("/quota@openclaw", { botUsername: "openclaw" })).toBe("/quota");
     expect(
       normalizeCommandBody("/help@openclaw args", {
         botUsername: "openclaw",

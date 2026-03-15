@@ -105,6 +105,13 @@ vi.mock("../../gateway/call.js", () => ({
   callGateway: (opts: unknown) => callGatewayMock(opts),
 }));
 
+const loadCostUsageSummaryMock = vi.hoisted(() => vi.fn());
+const loadSessionCostSummaryMock = vi.hoisted(() => vi.fn());
+vi.mock("../../infra/session-cost-usage.js", () => ({
+  loadCostUsageSummary: (...args: unknown[]) => loadCostUsageSummaryMock(...args),
+  loadSessionCostSummary: (...args: unknown[]) => loadSessionCostSummaryMock(...args),
+}));
+
 import type { HandleCommandsParams } from "./commands-types.js";
 import { buildCommandContext, handleCommands } from "./commands.js";
 
@@ -136,6 +143,38 @@ afterAll(async () => {
 function buildParams(commandBody: string, cfg: OpenClawConfig, ctxOverrides?: Partial<MsgContext>) {
   return buildCommandTestParams(commandBody, cfg, ctxOverrides, { workspaceDir: testWorkspaceDir });
 }
+
+describe("handleCommands /quota", () => {
+  it("matches /usage behavior for usage footer changes", async () => {
+    const cfg = { commands: { text: true } } as OpenClawConfig;
+    const usageResult = await handleCommands(buildParams("/usage tokens", cfg));
+    const quotaResult = await handleCommands(buildParams("/quota tokens", cfg));
+
+    expect(quotaResult.shouldContinue).toBe(false);
+    expect(quotaResult.reply?.text).toBe(usageResult.reply?.text);
+  });
+
+  it("matches /usage behavior for cost summaries", async () => {
+    const cfg = { commands: { text: true } } as OpenClawConfig;
+    loadSessionCostSummaryMock.mockResolvedValue({
+      totalCost: 1.23,
+      totalTokens: 4567,
+      missingCostEntries: 0,
+    });
+    loadCostUsageSummaryMock.mockResolvedValue({
+      daily: [
+        { date: new Date().toLocaleDateString("en-CA"), totalCost: 0.45, missingCostEntries: 0 },
+      ],
+      totals: { totalCost: 3.21, missingCostEntries: 0 },
+    });
+
+    const usageResult = await handleCommands(buildParams("/usage cost", cfg));
+    const quotaResult = await handleCommands(buildParams("/quota cost", cfg));
+
+    expect(quotaResult.shouldContinue).toBe(false);
+    expect(quotaResult.reply?.text).toBe(usageResult.reply?.text);
+  });
+});
 
 describe("handleCommands gating", () => {
   it("blocks gated commands when disabled or not elevated-allowlisted", async () => {

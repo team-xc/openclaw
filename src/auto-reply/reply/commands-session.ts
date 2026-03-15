@@ -244,7 +244,13 @@ export const handleUsageCommand: CommandHandler = async (params, allowTextComman
     return null;
   }
   const normalized = params.command.commandBodyNormalized;
-  if (normalized !== "/usage" && !normalized.startsWith("/usage ")) {
+  const commandPrefix =
+    normalized === "/usage" || normalized.startsWith("/usage ")
+      ? "/usage"
+      : normalized === "/quota" || normalized.startsWith("/quota ")
+        ? "/quota"
+        : null;
+  if (!commandPrefix) {
     return null;
   }
   const normalizedSurface = normalizeMessageChannel(params.command.channel);
@@ -252,12 +258,12 @@ export const handleUsageCommand: CommandHandler = async (params, allowTextComman
     normalizedSurface === "telegram" || normalizedSurface === INTERNAL_MESSAGE_CHANNEL;
   if (!params.command.isAuthorizedSender) {
     logVerbose(
-      `Ignoring /usage from unauthorized sender: ${params.command.senderId || "<unknown>"}`,
+      `Ignoring ${commandPrefix} from unauthorized sender: ${params.command.senderId || "<unknown>"}`,
     );
     return { shouldContinue: false };
   }
 
-  const rawArgs = normalized === "/usage" ? "" : normalized.slice("/usage".length).trim();
+  const rawArgs = normalized === commandPrefix ? "" : normalized.slice(commandPrefix.length).trim();
   const requested = rawArgs ? normalizeUsageDisplay(rawArgs) : undefined;
   if (rawArgs.toLowerCase().startsWith("cost")) {
     const sessionSummary = await loadSessionCostSummary({
