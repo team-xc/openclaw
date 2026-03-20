@@ -383,7 +383,9 @@ export const zh_CN: TranslationMap = {
     },
   },
   debug: {
+    build: "构建项目",
+    building: "正在构建项目…",
     restart: "重启网关",
-    restarting: "重启中...",
+    restarting: "正在重启网关…",
   },
 };

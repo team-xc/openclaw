@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { restartGateway } from "./debug.ts";
+import { restartGateway, runGatewayBuild } from "./debug.ts";
 
 function createState() {
   return {
@@ -16,6 +16,9 @@ function createState() {
     debugCallParams: "{}",
     debugCallResult: null,
     debugCallError: null,
+    debugBuildRunning: false,
+    debugBuildResult: null,
+    debugBuildError: null,
     debugRestarting: false,
   };
 }
@@ -40,5 +43,49 @@ describe("restartGateway", () => {
 
     expect(state.debugRestarting).toBe(false);
     expect(state.debugCallError).toContain("boom");
+  });
+});
+
+describe("runGatewayBuild", () => {
+  it("stores the structured build result without touching manual RPC state", async () => {
+    const state = createState();
+    state.debugCallResult = '{"ok":true}';
+    state.client.request.mockResolvedValue({
+      ok: true,
+      code: 0,
+      durationMs: 123,
+      cwd: "/repo/openclaw",
+      command: "source ~/.nvm/nvm.sh && nvm use 24 && pnpm build",
+      stdoutTail: "done",
+      stderrTail: "",
+      truncated: false,
+    });
+
+    await runGatewayBuild(state);
+
+    expect(state.client.request).toHaveBeenCalledWith("gateway.build", {});
+    expect(state.debugBuildRunning).toBe(false);
+    expect(state.debugBuildResult).toEqual(
+      expect.objectContaining({
+        ok: true,
+        code: 0,
+        cwd: "/repo/openclaw",
+      }),
+    );
+    expect(state.debugBuildError).toBeNull();
+    expect(state.debugCallResult).toBe('{"ok":true}');
+  });
+
+  it("stores build request errors separately from manual RPC errors", async () => {
+    const state = createState();
+    state.debugCallError = "rpc failed";
+    state.client.request.mockRejectedValue(new Error("build failed"));
+
+    await runGatewayBuild(state);
+
+    expect(state.debugBuildRunning).toBe(false);
+    expect(state.debugBuildResult).toBeNull();
+    expect(state.debugBuildError).toContain("build failed");
+    expect(state.debugCallError).toBe("rpc failed");
   });
 });

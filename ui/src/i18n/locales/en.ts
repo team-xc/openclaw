@@ -390,7 +390,9 @@ export const en: TranslationMap = {
     },
   },
   debug: {
+    build: "Build Project",
+    building: "Building Project…",
     restart: "Restart Gateway",
-    restarting: "Restarting...",
+    restarting: "Restarting Gateway…",
   },
 };

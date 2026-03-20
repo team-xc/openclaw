@@ -1,5 +1,6 @@
 import { html, nothing } from "lit";
 import type { EventLogEntry } from "../app-events.ts";
+import type { DebugBuildResult } from "../controllers/debug.ts";
 import { formatEventPayload } from "../presenter.ts";
 
 export type DebugProps = {
@@ -14,6 +15,9 @@ export type DebugProps = {
   callParams: string;
   callResult: string | null;
   callError: string | null;
+  buildRunning: boolean;
+  buildResult: DebugBuildResult | null;
+  buildError: string | null;
   onCallMethodChange: (next: string) => void;
   onCallParamsChange: (next: string) => void;
   onRefresh: () => void;
@@ -32,6 +36,13 @@ export function renderDebug(props: DebugProps) {
   const securityTone = critical > 0 ? "danger" : warn > 0 ? "warn" : "success";
   const securityLabel =
     critical > 0 ? `${critical} critical` : warn > 0 ? `${warn} warnings` : "No critical issues";
+  const buildTone = props.buildResult
+    ? props.buildResult.ok
+      ? "success"
+      : "danger"
+    : props.buildError
+      ? "danger"
+      : "warn";
 
   return html`
     <section class="grid grid-cols-2">
@@ -116,6 +127,93 @@ export function renderDebug(props: DebugProps) {
         }
       </div>
     </section>
+
+    ${
+      props.buildRunning || props.buildResult || props.buildError
+        ? html`
+            <section class="card" style="margin-top: 18px;">
+              <div class="card-title">Build Status</div>
+              <div class="card-sub">Runs the fixed project build with Node 24 via nvm.</div>
+              <div class="stack" style="margin-top: 12px;">
+                ${
+                  props.buildRunning
+                    ? html`
+                        <div class="callout warn">Build in progress…</div>
+                      `
+                    : nothing
+                }
+                ${
+                  props.buildError
+                    ? html`<div class="callout danger">${props.buildError}</div>`
+                    : nothing
+                }
+                ${
+                  props.buildResult
+                    ? html`
+                        <div class="callout ${buildTone}">
+                          ${props.buildResult.ok ? "Build completed successfully" : "Build failed"}
+                        </div>
+                        <div class="list" style="margin-top: 8px;">
+                          <div class="list-item">
+                            <div class="list-main">
+                              <div class="list-title">Command</div>
+                              <div class="list-sub mono">${props.buildResult.command}</div>
+                            </div>
+                          </div>
+                          <div class="list-item">
+                            <div class="list-main">
+                              <div class="list-title">Working directory</div>
+                              <div class="list-sub mono">${props.buildResult.cwd ?? "n/a"}</div>
+                            </div>
+                          </div>
+                          <div class="list-item">
+                            <div class="list-main">
+                              <div class="list-title">Exit code</div>
+                              <div class="list-sub mono">${String(props.buildResult.code)}</div>
+                            </div>
+                          </div>
+                          <div class="list-item">
+                            <div class="list-main">
+                              <div class="list-title">Duration</div>
+                              <div class="list-sub mono">${String(props.buildResult.durationMs)} ms</div>
+                            </div>
+                          </div>
+                        </div>
+                        ${
+                          props.buildResult.stdoutTail
+                            ? html`
+                                <div>
+                                  <div class="muted">stdout (tail)</div>
+                                  <pre class="code-block">${props.buildResult.stdoutTail}</pre>
+                                </div>
+                              `
+                            : nothing
+                        }
+                        ${
+                          props.buildResult.stderrTail
+                            ? html`
+                                <div>
+                                  <div class="muted">stderr (tail)</div>
+                                  <pre class="code-block">${props.buildResult.stderrTail}</pre>
+                                </div>
+                              `
+                            : nothing
+                        }
+                        ${
+                          props.buildResult.truncated
+                            ? html`
+                                <div class="muted">Output truncated to the most recent logs.</div>
+                              `
+                            : nothing
+                        }
+                      `
+                    : nothing
+                }
+              </div>
+            </section>
+          `
+        : nothing
+    }
 
     <section class="card" style="margin-top: 18px;">
       <div class="card-title">Models</div>

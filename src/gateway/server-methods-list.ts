@@ -102,6 +102,7 @@ const BASE_METHODS = [
   "chat.abort",
   "chat.send",
   // Gateway lifecycle
+  "gateway.build",
   "gateway.restart",
 ];
 

@@ -1,7 +1,9 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GATEWAY_EVENT_UPDATE_AVAILABLE } from "../../../src/gateway/events.js";
 import { ConnectErrorDetailCodes } from "../../../src/gateway/protocol/connect-error-details.js";
-import { connectGateway, resolveControlUiClientVersion } from "./app-gateway.ts";
+import type { ToolStreamEntry } from "./app-tool-stream.ts";
+
+type GatewayModule = typeof import("./app-gateway.ts");
 
 type GatewayClientMock = {
   start: ReturnType<typeof vi.fn>;
@@ -18,6 +20,32 @@ type GatewayClientMock = {
 };
 
 const gatewayClientInstances: GatewayClientMock[] = [];
+let connectGateway: GatewayModule["connectGateway"];
+let resolveControlUiClientVersion: GatewayModule["resolveControlUiClientVersion"];
+
+function createStorageMock(): Storage {
+  const store = new Map<string, string>();
+  return {
+    get length() {
+      return store.size;
+    },
+    clear() {
+      store.clear();
+    },
+    getItem(key: string) {
+      return store.get(key) ?? null;
+    },
+    key(index: number) {
+      return Array.from(store.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      store.delete(key);
+    },
+    setItem(key: string, value: string) {
+      store.set(key, String(value));
+    },
+  };
+}
 
 vi.mock("./gateway.ts", () => {
   function resolveGatewayErrorDetailCode(
@@ -93,6 +121,9 @@ function createHost() {
     clientInstanceId: "instance-test",
     client: null,
     connected: false,
+    debugBuildRunning: false,
+    debugBuildResult: null,
+    debugBuildError: null,
     debugRestarting: false,
     hello: null,
     lastError: null,
@@ -113,16 +144,29 @@ function createHost() {
     serverVersion: null,
     sessionKey: "main",
     chatRunId: null,
+    chatToolMessages: [],
+    chatStreamSegments: [],
+    toolStreamById: new Map<string, ToolStreamEntry>(),
+    toolStreamOrder: [],
+    toolStreamSyncTimer: null,
     refreshSessionsAfterChat: new Set<string>(),
     execApprovalQueue: [],
     execApprovalError: null,
     updateAvailable: null,
-  } as unknown as Parameters<typeof connectGateway>[0];
+  } as unknown as Parameters<GatewayModule["connectGateway"]>[0];
 }
 
 describe("connectGateway", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     gatewayClientInstances.length = 0;
+    vi.resetModules();
+    vi.stubGlobal("localStorage", createStorageMock());
+    vi.stubGlobal("navigator", { language: "en-US" } as Navigator);
+    ({ connectGateway, resolveControlUiClientVersion } = await import("./app-gateway.ts"));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("ignores stale client onGap callbacks after reconnect", () => {
@@ -228,6 +272,56 @@ describe("connectGateway", () => {
 
     expect(host.connected).toBe(true);
     expect(host.debugRestarting).toBe(false);
+  });
+
+  it("clears stale build state when reconnecting", () => {
+    const host = createHost();
+    host.debugBuildRunning = true;
+    host.debugBuildResult = {
+      ok: true,
+      code: 0,
+      durationMs: 123,
+      cwd: "/repo/openclaw",
+      command: "pnpm build",
+      stdoutTail: "done",
+      stderrTail: "",
+      truncated: false,
+    };
+    host.debugBuildError = "old error";
+
+    connectGateway(host);
+
+    expect(host.debugBuildRunning).toBe(false);
+    expect(host.debugBuildResult).toBeNull();
+    expect(host.debugBuildError).toBeNull();
+  });
+
+  it("clears stale build state when the active connection closes", () => {
+    const host = createHost();
+
+    connectGateway(host);
+    const client = gatewayClientInstances[0];
+    expect(client).toBeDefined();
+
+    host.debugBuildRunning = true;
+    host.debugBuildResult = {
+      ok: true,
+      code: 0,
+      durationMs: 123,
+      cwd: "/repo/openclaw",
+      command: "pnpm build",
+      stdoutTail: "done",
+      stderrTail: "",
+      truncated: false,
+    };
+    host.debugBuildError = "old error";
+
+    client.emitClose({ code: 1005 });
+
+    expect(host.connected).toBe(false);
+    expect(host.debugBuildRunning).toBe(false);
+    expect(host.debugBuildResult).toBeNull();
+    expect(host.debugBuildError).toBeNull();
   });
 
   it("maps generic fetch-failed auth errors to actionable token mismatch message", () => {

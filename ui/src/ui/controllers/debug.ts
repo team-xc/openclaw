@@ -1,6 +1,17 @@
 import type { GatewayBrowserClient } from "../gateway.ts";
 import type { HealthSnapshot, StatusSummary } from "../types.ts";
 
+export type DebugBuildResult = {
+  ok: boolean;
+  code: number;
+  durationMs: number;
+  cwd: string | null;
+  command: string;
+  stdoutTail: string;
+  stderrTail: string;
+  truncated: boolean;
+};
+
 export type DebugState = {
   client: GatewayBrowserClient | null;
   connected: boolean;
@@ -13,6 +24,9 @@ export type DebugState = {
   debugCallParams: string;
   debugCallResult: string | null;
   debugCallError: string | null;
+  debugBuildRunning: boolean;
+  debugBuildResult: DebugBuildResult | null;
+  debugBuildError: string | null;
   debugRestarting: boolean;
 };
 
@@ -71,5 +85,22 @@ export async function restartGateway(state: DebugState) {
   } catch (err) {
     state.debugCallError = String(err);
     state.debugRestarting = false;
+  }
+}
+
+export async function runGatewayBuild(state: DebugState) {
+  if (!state.client || !state.connected || state.debugBuildRunning) {
+    return;
+  }
+  state.debugBuildRunning = true;
+  state.debugBuildError = null;
+  state.debugBuildResult = null;
+  try {
+    const result = await state.client.request("gateway.build", {});
+    state.debugBuildResult = result as DebugBuildResult;
+  } catch (err) {
+    state.debugBuildError = String(err);
+  } finally {
+    state.debugBuildRunning = false;
   }
 }

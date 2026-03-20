@@ -68,6 +68,9 @@ type GatewayHost = {
   clientInstanceId: string;
   client: GatewayBrowserClient | null;
   connected: boolean;
+  debugBuildRunning?: boolean;
+  debugBuildResult?: import("./controllers/debug.ts").DebugBuildResult | null;
+  debugBuildError?: string | null;
   debugRestarting?: boolean;
   hello: GatewayHelloOk | null;
   lastError: string | null;
@@ -189,6 +192,9 @@ export function connectGateway(host: GatewayHost) {
   host.lastErrorCode = null;
   host.hello = null;
   host.connected = false;
+  host.debugBuildRunning = false;
+  host.debugBuildResult = null;
+  host.debugBuildError = null;
   host.execApprovalQueue = [];
   host.execApprovalError = null;
 
@@ -210,6 +216,9 @@ export function connectGateway(host: GatewayHost) {
         return;
       }
       host.connected = true;
+      host.debugBuildRunning = false;
+      host.debugBuildResult = null;
+      host.debugBuildError = null;
       host.debugRestarting = false;
       host.lastError = null;
       host.lastErrorCode = null;
@@ -233,6 +242,9 @@ export function connectGateway(host: GatewayHost) {
         return;
       }
       host.connected = false;
+      host.debugBuildRunning = false;
+      host.debugBuildResult = null;
+      host.debugBuildError = null;
       // Code 1012 = Service Restart (expected during config saves, don't show as error)
       host.lastErrorCode =
         resolveGatewayErrorDetailCode(error) ??
