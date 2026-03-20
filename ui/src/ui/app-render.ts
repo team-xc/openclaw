@@ -39,7 +39,7 @@ import {
   updateCronJobsFilter,
   updateCronRunsFilter,
 } from "./controllers/cron.ts";
-import { loadDebug, callDebugMethod } from "./controllers/debug.ts";
+import { loadDebug, callDebugMethod, restartGateway } from "./controllers/debug.ts";
 import { loadLogs } from "./controllers/logs.ts";
 import { loadPresence } from "./controllers/presence.ts";
 import { deleteSessionAndRefresh, loadSessions, patchSession } from "./controllers/sessions.ts";
@@ -287,6 +287,13 @@ export function renderApp(state: AppViewState) {
           <div class="page-meta">
             ${state.lastError ? html`<div class="pill danger">${state.lastError}</div>` : nothing}
             ${isChat ? renderChatControls(state) : nothing}
+            ${state.tab === "debug"
+              ? html`<button
+                  class="btn btn--sm"
+                  ?disabled=${state.debugRestarting || !state.connected}
+                  @click=${() => restartGateway(state)}
+                >${state.debugRestarting ? t("debug.restarting") : t("debug.restart")}</button>`
+              : nothing}
           </div>
         </section>
 

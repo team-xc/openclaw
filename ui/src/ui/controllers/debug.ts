@@ -13,6 +13,7 @@ export type DebugState = {
   debugCallParams: string;
   debugCallResult: string | null;
   debugCallError: string | null;
+  debugRestarting: boolean;
 };
 
 export async function loadDebug(state: DebugState) {
@@ -56,5 +57,19 @@ export async function callDebugMethod(state: DebugState) {
     state.debugCallResult = JSON.stringify(res, null, 2);
   } catch (err) {
     state.debugCallError = String(err);
+  }
+}
+
+export async function restartGateway(state: DebugState) {
+  if (!state.client || !state.connected || state.debugRestarting) {
+    return;
+  }
+  state.debugRestarting = true;
+  state.debugCallError = null;
+  try {
+    await state.client.request("gateway.restart", {});
+  } catch (err) {
+    state.debugCallError = String(err);
+    state.debugRestarting = false;
   }
 }

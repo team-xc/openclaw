@@ -101,6 +101,8 @@ const BASE_METHODS = [
   "chat.history",
   "chat.abort",
   "chat.send",
+  // Gateway lifecycle
+  "gateway.restart",
 ];
 
 export function listGatewayMethods(): string[] {

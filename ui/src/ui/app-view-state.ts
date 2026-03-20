@@ -277,6 +277,7 @@ export type AppViewState = {
     debugCallParams: string;
     debugCallResult: string | null;
     debugCallError: string | null;
+    debugRestarting: boolean;
     logsLoading: boolean;
     logsError: string | null;
     logsFile: string | null;

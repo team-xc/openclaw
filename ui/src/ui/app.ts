@@ -363,6 +363,7 @@ export class OpenClawApp extends LitElement {
   @state() debugCallParams = "{}";
   @state() debugCallResult: string | null = null;
   @state() debugCallError: string | null = null;
+  @state() debugRestarting = false;
 
   @state() logsLoading = false;
   @state() logsError: string | null = null;

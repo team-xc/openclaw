@@ -7,6 +7,7 @@ type GatewayClientMock = {
   start: ReturnType<typeof vi.fn>;
   stop: ReturnType<typeof vi.fn>;
   options: { clientVersion?: string };
+  emitHello: (hello?: Record<string, unknown>) => void;
   emitClose: (info: {
     code: number;
     reason?: string;
@@ -37,6 +38,7 @@ vi.mock("./gateway.ts", () => {
     constructor(
       private opts: {
         clientVersion?: string;
+        onHello?: (hello: unknown) => void;
         onClose?: (info: {
           code: number;
           reason: string;
@@ -50,6 +52,9 @@ vi.mock("./gateway.ts", () => {
         start: this.start,
         stop: this.stop,
         options: { clientVersion: this.opts.clientVersion },
+        emitHello: (hello) => {
+          this.opts.onHello?.((hello ?? {}) as never);
+        },
         emitClose: (info) => {
           this.opts.onClose?.({
             code: info.code,
@@ -88,6 +93,7 @@ function createHost() {
     clientInstanceId: "instance-test",
     client: null,
     connected: false,
+    debugRestarting: false,
     hello: null,
     lastError: null,
     lastErrorCode: null,
@@ -208,6 +214,20 @@ describe("connectGateway", () => {
     secondClient.emitClose({ code: 1005 });
     expect(host.lastError).toBe("disconnected (1005): no reason");
     expect(host.lastErrorCode).toBeNull();
+  });
+
+  it("clears debugRestarting after the connection comes back", () => {
+    const host = createHost();
+    host.debugRestarting = true;
+
+    connectGateway(host);
+    const client = gatewayClientInstances[0];
+    expect(client).toBeDefined();
+
+    client.emitHello({ server: { version: "2026.3.20" } });
+
+    expect(host.connected).toBe(true);
+    expect(host.debugRestarting).toBe(false);
   });
 
   it("maps generic fetch-failed auth errors to actionable token mismatch message", () => {

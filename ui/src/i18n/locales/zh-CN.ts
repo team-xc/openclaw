@@ -382,4 +382,8 @@ export const zh_CN: TranslationMap = {
       nameRequiredShort: "名称为必填。",
     },
   },
+  debug: {
+    restart: "重启网关",
+    restarting: "重启中...",
+  },
 };

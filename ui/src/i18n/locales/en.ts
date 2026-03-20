@@ -389,4 +389,8 @@ export const en: TranslationMap = {
       nameRequiredShort: "Name required.",
     },
   },
+  debug: {
+    restart: "Restart Gateway",
+    restarting: "Restarting...",
+  },
 };

@@ -68,6 +68,7 @@ type GatewayHost = {
   clientInstanceId: string;
   client: GatewayBrowserClient | null;
   connected: boolean;
+  debugRestarting?: boolean;
   hello: GatewayHelloOk | null;
   lastError: string | null;
   lastErrorCode: string | null;
@@ -209,6 +210,7 @@ export function connectGateway(host: GatewayHost) {
         return;
       }
       host.connected = true;
+      host.debugRestarting = false;
       host.lastError = null;
       host.lastErrorCode = null;
       host.hello = hello;
