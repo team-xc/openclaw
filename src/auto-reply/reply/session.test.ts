@@ -1429,6 +1429,53 @@ describe("initSessionState preserves behavior overrides across /new and /reset",
     }
   });
 
+  it("keeps native Telegram reset sessions aligned to the target chat session", async () => {
+    const storePath = await createStorePath("openclaw-reset-native-overrides-");
+    const targetSessionKey = "agent:assistant:telegram:group:-1003533926542";
+    const slashSessionKey = "agent:assistant:telegram:slash:200";
+    const existingSessionId = "existing-session-native-overrides";
+    const cfg = {
+      session: { store: storePath, idleMinutes: 999 },
+    } as OpenClawConfig;
+    for (const body of ["/new", "/reset"]) {
+      await seedSessionStoreWithOverrides({
+        storePath,
+        sessionKey: targetSessionKey,
+        sessionId: existingSessionId,
+        overrides: {
+          fastMode: true,
+          thinkingLevel: "high",
+        },
+      });
+
+      const result = await initSessionState({
+        ctx: {
+          Body: body,
+          RawBody: body,
+          CommandBody: body,
+          From: "telegram:group:-1003533926542",
+          To: "slash:200",
+          ChatType: "group",
+          Provider: "telegram",
+          Surface: "telegram",
+          CommandSource: "native",
+          SessionKey: slashSessionKey,
+          CommandTargetSessionKey: targetSessionKey,
+        },
+        cfg,
+        commandAuthorized: true,
+      });
+
+      expect(result.sessionKey).toBe(targetSessionKey);
+      expect(result.sessionCtx.SessionKey).toBe(targetSessionKey);
+      expect(result.isNewSession).toBe(true);
+      expect(result.resetTriggered).toBe(true);
+      expect(result.sessionId).not.toBe(existingSessionId);
+      expect(result.sessionEntry.thinkingLevel).toBe("high");
+      expect(result.sessionEntry.fastMode).toBe(true);
+    }
+  });
+
   it("archives the old session store entry on /new", async () => {
     const storePath = await createStorePath("openclaw-archive-old-");
     const sessionKey = "agent:main:telegram:dm:user-archive";

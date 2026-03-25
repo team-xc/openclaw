@@ -578,8 +578,11 @@ export async function initSessionState(params: {
     });
   }
 
+  // Native slash commands are handled on a dedicated slash session, but the
+  // reply pipeline should keep using the target chat session context so follow-up
+  // logic stays aligned with the chat that actually owns the state.
   const sessionCtx: TemplateContext = {
-    ...ctx,
+    ...sessionCtxForState,
     // Keep BodyStripped aligned with Body (best default for agent prompts).
     // RawBody is reserved for command/directive parsing and may omit context.
     BodyStripped: normalizeInboundTextNewlines(
