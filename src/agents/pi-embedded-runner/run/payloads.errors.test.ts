@@ -390,4 +390,41 @@ describe("buildEmbeddedRunPayloads", () => {
       detail: "connection timeout",
     });
   });
+
+  it("localizes gateway agent tool warnings for users", () => {
+    const payloads = buildPayloads({
+      lastToolError: { toolName: "gateway", meta: "agent", error: "request failed" },
+      verboseLevel: "off",
+    });
+
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0]?.isError).toBe(true);
+    expect(payloads[0]?.text).toBe("🦞 网关：代理执行失败");
+  });
+
+  it("localizes gateway workspace tool warnings with details in verbose mode", () => {
+    const payloads = buildPayloads({
+      lastToolError: { toolName: "gateway", meta: "workspace", error: "permission denied" },
+      verboseLevel: "on",
+    });
+
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0]?.isError).toBe(true);
+    expect(payloads[0]?.text).toBe("🦞 网关：工作区处理失败 详情 permission denied");
+  });
+
+  it("localizes all gateway action failures with Chinese labels", () => {
+    const payloads = buildPayloads({
+      lastToolError: {
+        toolName: "gateway",
+        meta: "config.patch, session key main",
+        error: "bad patch",
+      },
+      verboseLevel: "off",
+    });
+
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0]?.isError).toBe(true);
+    expect(payloads[0]?.text).toBe("🦞 网关：配置更新失败");
+  });
 });

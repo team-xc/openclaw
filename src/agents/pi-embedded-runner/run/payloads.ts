@@ -33,6 +33,49 @@ type ToolErrorWarningPolicy = {
   includeDetails: boolean;
 };
 
+function formatLocalizedToolWarning(params: {
+  toolName: string;
+  meta?: string;
+  error?: string;
+  includeDetails: boolean;
+  markdown?: boolean;
+}): string {
+  const toolName = params.toolName.trim().toLowerCase();
+  const meta = params.meta?.trim().toLowerCase();
+  if (toolName === "gateway") {
+    const action = meta?.split(",")[0]?.trim();
+    const actionLabel =
+      action === "agent"
+        ? "代理执行"
+        : action === "workspace"
+          ? "工作区处理"
+          : action === "restart"
+            ? "重启"
+            : action === "config.get"
+              ? "配置读取"
+              : action === "config.schema.lookup"
+                ? "配置结构查询"
+                : action === "config.apply"
+                  ? "配置应用"
+                  : action === "config.patch"
+                    ? "配置更新"
+                    : action === "update.run"
+                      ? "更新执行"
+                      : "操作";
+    return params.includeDetails && params.error
+      ? `🦞 网关：${actionLabel}失败 详情 ${params.error}`
+      : `🦞 网关：${actionLabel}失败`;
+  }
+
+  const toolSummary = formatToolAggregate(
+    params.toolName,
+    params.meta ? [params.meta] : undefined,
+    { markdown: params.markdown },
+  );
+  const errorSuffix = params.includeDetails && params.error ? `: ${params.error}` : "";
+  return `⚠️ ${toolSummary} failed${errorSuffix}`;
+}
+
 const RECOVERABLE_TOOL_ERROR_KEYWORDS = [
   "required",
   "missing",
@@ -294,16 +337,13 @@ export function buildEmbeddedRunPayloads(params: {
     // Always surface mutating tool failures so we do not silently confirm actions that did not happen.
     // Otherwise, keep the previous behavior and only surface non-recoverable failures when no reply exists.
     if (warningPolicy.showWarning) {
-      const toolSummary = formatToolAggregate(
-        params.lastToolError.toolName,
-        params.lastToolError.meta ? [params.lastToolError.meta] : undefined,
-        { markdown: useMarkdown },
-      );
-      const errorSuffix =
-        warningPolicy.includeDetails && params.lastToolError.error
-          ? `: ${params.lastToolError.error}`
-          : "";
-      const warningText = `⚠️ ${toolSummary} failed${errorSuffix}`;
+      const warningText = formatLocalizedToolWarning({
+        toolName: params.lastToolError.toolName,
+        meta: params.lastToolError.meta,
+        error: params.lastToolError.error,
+        includeDetails: warningPolicy.includeDetails,
+        markdown: useMarkdown,
+      });
       const normalizedWarning = normalizeTextForComparison(warningText);
       const duplicateWarning = normalizedWarning
         ? replyItems.some((item) => {
