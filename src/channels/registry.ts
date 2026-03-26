@@ -8,7 +8,7 @@ export const CHAT_CHANNEL_ORDER = ["telegram"] as const;
 
 export type ChatChannelId = (typeof CHAT_CHANNEL_ORDER)[number];
 
-export const CHANNEL_IDS = [...CHAT_CHANNEL_ORDER] as const;
+export const CHANNEL_IDS: readonly ChatChannelId[] = [...CHAT_CHANNEL_ORDER];
 
 export type ChatChannelMeta = ChannelMeta;
 
@@ -27,10 +27,26 @@ const CHAT_CHANNEL_META: Record<ChatChannelId, ChannelMeta> = {
 
 export const CHAT_CHANNEL_ALIASES: Record<string, ChatChannelId> = {};
 
+function buildFallbackChannelMeta(id: string): ChatChannelMeta {
+  return {
+    id,
+    label: id,
+    selectionLabel: id,
+    detailLabel: id,
+    docsPath: `/channels/${id}`,
+    docsLabel: id,
+    blurb: `${id} channel`,
+  };
+}
+
 const normalizeChannelKey = (raw?: string | null): string | undefined => {
   const normalized = raw?.trim().toLowerCase();
   return normalized || undefined;
 };
+
+export function isChatChannelId(id: string): id is ChatChannelId {
+  return CHAT_CHANNEL_ORDER.some((channelId) => channelId === id);
+}
 
 export function listChatChannels(): ChatChannelMeta[] {
   return CHAT_CHANNEL_ORDER.map((id) => CHAT_CHANNEL_META[id]);
@@ -40,8 +56,11 @@ export function listChatChannelAliases(): string[] {
   return Object.keys(CHAT_CHANNEL_ALIASES);
 }
 
-export function getChatChannelMeta(id: ChatChannelId): ChatChannelMeta {
-  return CHAT_CHANNEL_META[id];
+export function getChatChannelMeta(id: string): ChatChannelMeta {
+  const normalized = normalizeChannelKey(id) ?? id;
+  return isChatChannelId(normalized)
+    ? CHAT_CHANNEL_META[normalized]
+    : buildFallbackChannelMeta(normalized);
 }
 
 export function normalizeChatChannelId(raw?: string | null): ChatChannelId | null {
@@ -50,7 +69,7 @@ export function normalizeChatChannelId(raw?: string | null): ChatChannelId | nul
     return null;
   }
   const resolved = CHAT_CHANNEL_ALIASES[normalized] ?? normalized;
-  return CHAT_CHANNEL_ORDER.includes(resolved) ? resolved : null;
+  return isChatChannelId(resolved) ? resolved : null;
 }
 
 // Channel docking: prefer this helper in shared code. Importing from

@@ -2,7 +2,7 @@ import {
   getActivePluginRegistryVersion,
   requireActivePluginRegistry,
 } from "../../plugins/runtime.js";
-import { CHAT_CHANNEL_ORDER, type ChatChannelId, normalizeAnyChannelId } from "../registry.js";
+import { CHAT_CHANNEL_ORDER, isChatChannelId, normalizeAnyChannelId } from "../registry.js";
 import type { ChannelId, ChannelPlugin } from "./types.js";
 
 // Channel plugins registry (runtime).
@@ -48,8 +48,8 @@ function resolveCachedChannelPlugins(): CachedChannelPlugins {
   }
 
   const sorted = dedupeChannels(registry.channels.map((entry) => entry.plugin)).toSorted((a, b) => {
-    const indexA = CHAT_CHANNEL_ORDER.indexOf(a.id as ChatChannelId);
-    const indexB = CHAT_CHANNEL_ORDER.indexOf(b.id as ChatChannelId);
+    const indexA = isChatChannelId(a.id) ? CHAT_CHANNEL_ORDER.indexOf(a.id) : -1;
+    const indexB = isChatChannelId(b.id) ? CHAT_CHANNEL_ORDER.indexOf(b.id) : -1;
     const orderA = a.meta.order ?? (indexA === -1 ? 999 : indexA);
     const orderB = b.meta.order ?? (indexB === -1 ? 999 : indexB);
     if (orderA !== orderB) {

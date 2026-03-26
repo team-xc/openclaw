@@ -36,7 +36,6 @@ import type {
 type ConfiguredChannelAction = "update" | "disable" | "delete" | "skip";
 
 type ChannelStatusSummary = {
-  installedPlugins: ReturnType<typeof listChannelPlugins>;
   catalogEntries: ReturnType<typeof listChannelPluginCatalogEntries>;
   statusByChannel: Map<ChannelChoice, ChannelOnboardingStatus>;
   statusLines: string[];
@@ -116,13 +115,11 @@ async function collectChannelStatus(params: {
 }): Promise<ChannelStatusSummary> {
   const surfaceChannels = listChatChannels();
   const surfaceIds = new Set(surfaceChannels.map((meta) => meta.id));
-  const installedPlugins = listChannelPlugins().filter((plugin) =>
-    surfaceIds.has(plugin.id as ChannelChoice),
-  );
+  const installedPlugins = listChannelPlugins().filter((plugin) => surfaceIds.has(plugin.id));
   const installedIds = new Set(installedPlugins.map((plugin) => plugin.id));
   const workspaceDir = resolveAgentWorkspaceDir(params.cfg, resolveDefaultAgentId(params.cfg));
   const catalogEntries = listChannelPluginCatalogEntries({ workspaceDir }).filter(
-    (entry) => surfaceIds.has(entry.id as ChannelChoice) && !installedIds.has(entry.id),
+    (entry) => surfaceIds.has(entry.id) && !installedIds.has(entry.id),
   );
   const statusEntries = await Promise.all(
     listChannelOnboardingAdapters().map((adapter) =>
@@ -158,7 +155,6 @@ async function collectChannelStatus(params: {
   const mergedStatusByChannel = new Map(combinedStatuses.map((entry) => [entry.channel, entry]));
   const statusLines = combinedStatuses.flatMap((entry) => entry.statusLines);
   return {
-    installedPlugins,
     catalogEntries,
     statusByChannel: mergedStatusByChannel,
     statusLines,
@@ -308,8 +304,11 @@ export async function setupChannels(
     accountOverrides.whatsapp = options.whatsappAccountId.trim();
   }
 
-  const { installedPlugins, catalogEntries, statusByChannel, statusLines } =
-    await collectChannelStatus({ cfg: next, options, accountOverrides });
+  const { catalogEntries, statusByChannel, statusLines } = await collectChannelStatus({
+    cfg: next,
+    options,
+    accountOverrides,
+  });
   if (!options?.skipStatusNote && statusLines.length > 0) {
     await prompter.note(statusLines.join("\n"), "Channel status");
   }
@@ -646,7 +645,7 @@ export async function setupChannels(
 
   if (options?.quickstartDefaults) {
     const { entries } = getChannelEntries();
-    const choice = (await prompter.select({
+    const choice = await prompter.select<ChannelChoice | "__skip__">({
       message: "Select channel (QuickStart)",
       options: [
         ...buildSelectionOptions(entries),
@@ -657,7 +656,7 @@ export async function setupChannels(
         },
       ],
       initialValue: quickstartDefault,
-    })) as ChannelChoice | "__skip__";
+    });
     if (choice !== "__skip__") {
       await handleChannelChoice(choice);
     }
@@ -666,7 +665,7 @@ export async function setupChannels(
     const initialValue = options?.initialSelection?.[0] ?? quickstartDefault;
     while (true) {
       const { entries } = getChannelEntries();
-      const choice = (await prompter.select({
+      const choice = await prompter.select<ChannelChoice | typeof doneValue>({
         message: "Select a channel",
         options: [
           ...buildSelectionOptions(entries),
@@ -677,7 +676,7 @@ export async function setupChannels(
           },
         ],
         initialValue,
-      })) as ChannelChoice | typeof doneValue;
+      });
       if (choice === doneValue) {
         break;
       }

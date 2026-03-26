@@ -22,7 +22,12 @@ import type {
   ChannelThreadingContext,
   ChannelThreadingToolContext,
 } from "./plugins/types.js";
-import { CHAT_CHANNEL_ORDER, type ChatChannelId, getChatChannelMeta } from "./registry.js";
+import {
+  CHAT_CHANNEL_ORDER,
+  type ChatChannelId,
+  getChatChannelMeta,
+  isChatChannelId,
+} from "./registry.js";
 
 export type ChannelDock = {
   id: ChannelId;
@@ -143,7 +148,7 @@ function listPluginDockEntries(): Array<{ id: ChannelId; dock: ChannelDock; orde
       continue;
     }
     seen.add(id);
-    if (CHAT_CHANNEL_ORDER.includes(plugin.id as ChatChannelId)) {
+    if (isChatChannelId(plugin.id)) {
       continue;
     }
     const dock = entry.dock ?? buildDockFromPlugin(plugin);
@@ -161,8 +166,8 @@ export function listChannelDocks(): ChannelDock[] {
   const pluginEntries = listPluginDockEntries();
   const combined = [...baseEntries, ...pluginEntries];
   combined.sort((a, b) => {
-    const indexA = CHAT_CHANNEL_ORDER.indexOf(a.id as ChatChannelId);
-    const indexB = CHAT_CHANNEL_ORDER.indexOf(b.id as ChatChannelId);
+    const indexA = isChatChannelId(a.id) ? CHAT_CHANNEL_ORDER.indexOf(a.id) : -1;
+    const indexB = isChatChannelId(b.id) ? CHAT_CHANNEL_ORDER.indexOf(b.id) : -1;
     const orderA = a.order ?? (indexA === -1 ? 999 : indexA);
     const orderB = b.order ?? (indexB === -1 ? 999 : indexB);
     if (orderA !== orderB) {
@@ -174,7 +179,7 @@ export function listChannelDocks(): ChannelDock[] {
 }
 
 export function getChannelDock(id: ChannelId): ChannelDock | undefined {
-  const core = DOCKS[id as ChatChannelId];
+  const core = isChatChannelId(id) ? DOCKS[id] : undefined;
   if (core) {
     return core;
   }

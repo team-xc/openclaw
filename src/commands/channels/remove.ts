@@ -1,8 +1,5 @@
 import { resolveChannelDefaultAccountId } from "../../channels/plugins/helpers.js";
-import {
-  getChannelPlugin,
-  normalizeChannelId,
-} from "../../channels/plugins/index.js";
+import { getChannelPlugin, normalizeChannelId } from "../../channels/plugins/index.js";
 import { listChatChannels } from "../../channels/registry.js";
 import { type OpenClawConfig, writeConfigFile } from "../../config/config.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../routing/session-key.js";

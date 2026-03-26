@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  getChannelOnboardingAdapter,
-  listChannelOnboardingAdapters,
-} from "./registry.js";
+import { getChannelOnboardingAdapter, listChannelOnboardingAdapters } from "./registry.js";
 
 describe("onboarding registry", () => {
   it("exposes only the telegram onboarding adapter on the private surface", () => {
