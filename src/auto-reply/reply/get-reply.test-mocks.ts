@@ -1,4 +1,23 @@
-import { vi } from "vitest";
+import { vi, type Mock } from "vitest";
+import { createMockTypingController } from "./test-helpers.js";
+
+export const getReplyCommonMockState: {
+  typingController: ReturnType<typeof createMockTypingController>;
+  createTypingController: Mock<() => ReturnType<typeof createMockTypingController>>;
+} = {
+  typingController: createMockTypingController(),
+  createTypingController: vi.fn(),
+};
+
+export function resetGetReplyCommonMockState(): void {
+  getReplyCommonMockState.typingController = createMockTypingController();
+  getReplyCommonMockState.createTypingController.mockReset();
+  getReplyCommonMockState.createTypingController.mockImplementation(
+    () => getReplyCommonMockState.typingController,
+  );
+}
+
+resetGetReplyCommonMockState();
 
 export function registerGetReplyCommonMocks(): void {
   vi.mock("../../agents/agent-scope.js", () => ({
@@ -49,15 +68,6 @@ export function registerGetReplyCommonMocks(): void {
     stageSandboxMedia: vi.fn(async () => undefined),
   }));
   vi.mock("./typing.js", () => ({
-    createTypingController: vi.fn(() => ({
-      onReplyStart: async () => undefined,
-      startTypingLoop: async () => undefined,
-      startTypingOnText: async () => undefined,
-      refreshTypingTtl: () => undefined,
-      isActive: () => false,
-      markRunComplete: () => undefined,
-      markDispatchIdle: () => undefined,
-      cleanup: () => undefined,
-    })),
+    createTypingController: getReplyCommonMockState.createTypingController,
   }));
 }

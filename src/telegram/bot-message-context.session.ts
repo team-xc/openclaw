@@ -59,6 +59,7 @@ export async function buildTelegramInboundContextPayload(params: {
   topicConfig?: TelegramTopicConfig;
   stickerCacheHit: boolean;
   effectiveWasMentioned: boolean;
+  explicitInvokeForTyping: boolean;
   commandAuthorized: boolean;
   locationData?: import("../channels/location.js").NormalizedLocation;
   options?: TelegramMessageContextOptions;
@@ -91,6 +92,7 @@ export async function buildTelegramInboundContextPayload(params: {
     topicConfig,
     stickerCacheHit,
     effectiveWasMentioned,
+    explicitInvokeForTyping,
     commandAuthorized,
     locationData,
     options,
@@ -227,6 +229,7 @@ export async function buildTelegramInboundContextPayload(params: {
     ForwardedDate: forwardOrigin?.date ? forwardOrigin.date * 1000 : undefined,
     Timestamp: msg.date ? msg.date * 1000 : undefined,
     WasMentioned: isGroup ? effectiveWasMentioned : undefined,
+    ExplicitInvokeForTyping: isGroup ? explicitInvokeForTyping : undefined,
     MediaPath: contextMedia.length > 0 ? contextMedia[0]?.path : undefined,
     MediaType: contextMedia.length > 0 ? contextMedia[0]?.contentType : undefined,
     MediaUrl: contextMedia.length > 0 ? contextMedia[0]?.path : undefined,

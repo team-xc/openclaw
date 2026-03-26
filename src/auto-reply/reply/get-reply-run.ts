@@ -243,7 +243,14 @@ export async function runPreparedReply(
 
   const isFirstTurnInSession = isNewSession || !currentSystemSent;
   const isGroupChat = sessionCtx.ChatType === "group";
-  const wasMentioned = ctx.WasMentioned === true;
+  const typingChannel =
+    ctx.OriginatingChannel?.trim().toLowerCase() ??
+    ctx.Surface?.trim().toLowerCase() ??
+    ctx.Provider?.trim().toLowerCase();
+  const wasMentioned =
+    typingChannel === "telegram" && isGroupChat
+      ? ctx.ExplicitInvokeForTyping === true
+      : ctx.WasMentioned === true;
   const isHeartbeat = opts?.isHeartbeat === true;
   const { typingPolicy, suppressTyping } = resolveRunTypingPolicy({
     requestedPolicy: opts?.typingPolicy,

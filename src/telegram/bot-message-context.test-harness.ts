@@ -14,12 +14,14 @@ export const baseTelegramMessageContextConfig = {
 type BuildTelegramMessageContextForTestParams = {
   message: Record<string, unknown>;
   allMedia?: TelegramMediaRef[];
+  replyMedia?: TelegramMediaRef[];
   options?: BuildTelegramMessageContextParams["options"];
   cfg?: Record<string, unknown>;
   accountId?: string;
   resolveGroupActivation?: BuildTelegramMessageContextParams["resolveGroupActivation"];
   resolveGroupRequireMention?: BuildTelegramMessageContextParams["resolveGroupRequireMention"];
   resolveTelegramGroupConfig?: BuildTelegramMessageContextParams["resolveTelegramGroupConfig"];
+  sendChatActionHandler?: BuildTelegramMessageContextParams["sendChatActionHandler"];
 };
 
 export async function buildTelegramMessageContextForTest(
@@ -37,6 +39,7 @@ export async function buildTelegramMessageContextForTest(
       me: { id: 7, username: "bot" },
     } as never,
     allMedia: params.allMedia ?? [],
+    replyMedia: params.replyMedia ?? [],
     storeAllowFrom: [],
     options: params.options ?? {},
     bot: {
@@ -62,6 +65,6 @@ export async function buildTelegramMessageContextForTest(
         groupConfig: { requireMention: false },
         topicConfig: undefined,
       })),
-    sendChatActionHandler: { sendChatAction: vi.fn() } as never,
+    sendChatActionHandler: (params.sendChatActionHandler ?? { sendChatAction: vi.fn() }) as never,
   });
 }

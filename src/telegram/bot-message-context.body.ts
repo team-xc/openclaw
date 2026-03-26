@@ -9,12 +9,17 @@ import {
   recordPendingHistoryEntryIfEnabled,
   type HistoryEntry,
 } from "../auto-reply/reply/history.js";
-import { buildMentionRegexes, matchesMentionWithExplicit } from "../auto-reply/reply/mentions.js";
+import {
+  buildMentionRegexes,
+  matchesMentionWithExplicit,
+  stripMentions,
+} from "../auto-reply/reply/mentions.js";
 import type { MsgContext } from "../auto-reply/templating.js";
 import { resolveControlCommandGate } from "../channels/command-gating.js";
 import { formatLocationText, type NormalizedLocation } from "../channels/location.js";
 import { logInboundDrop } from "../channels/logging.js";
 import { resolveMentionGatingWithBypass } from "../channels/mention-gating.js";
+import type { TypingCallbacks } from "../channels/typing.js";
 import type { OpenClawConfig } from "../config/config.js";
 import type {
   TelegramDirectConfig,
@@ -47,6 +52,7 @@ export type TelegramInboundBodyResult = {
   historyKey?: string;
   commandAuthorized: boolean;
   effectiveWasMentioned: boolean;
+  explicitInvokeForTyping: boolean;
   canDetectMention: boolean;
   shouldBypassMention: boolean;
   stickerCacheHit: boolean;
@@ -73,11 +79,32 @@ async function resolveStickerVisionSupport(params: {
   }
 }
 
+function hasMeaningfulTelegramUserText(params: {
+  rawText: string;
+  cfg: OpenClawConfig;
+  agentId?: string;
+  botUsername?: string;
+}): boolean {
+  const stripped = stripMentions(
+    params.rawText,
+    {
+      Provider: "telegram",
+      Surface: "telegram",
+      BotUsername: params.botUsername,
+    },
+    params.cfg,
+    params.agentId,
+  );
+  const withoutBareMentions = stripped.replace(/(^|\s)@+(?=\s|$)/g, " ").trim();
+  return withoutBareMentions.length > 0;
+}
+
 export async function resolveTelegramInboundBody(params: {
   cfg: OpenClawConfig;
   primaryCtx: TelegramContext;
   msg: TelegramContext["message"];
   allMedia: TelegramMediaRef[];
+  replyMedia?: TelegramMediaRef[];
   isGroup: boolean;
   chatId: number | string;
   senderId: string;
@@ -93,12 +120,14 @@ export async function resolveTelegramInboundBody(params: {
   groupHistories: Map<string, HistoryEntry[]>;
   historyLimit: number;
   logger: TelegramLogger;
+  audioPreflightTyping?: Pick<TypingCallbacks, "onReplyStart" | "onCleanup">;
 }): Promise<TelegramInboundBodyResult | null> {
   const {
     cfg,
     primaryCtx,
     msg,
     allMedia,
+    replyMedia = [],
     isGroup,
     chatId,
     senderId,
@@ -114,6 +143,7 @@ export async function resolveTelegramInboundBody(params: {
     groupHistories,
     historyLimit,
     logger,
+    audioPreflightTyping,
   } = params;
   const botUsername = primaryCtx.me?.username?.toLowerCase();
   const mentionRegexes = buildMentionRegexes(cfg, routeAgentId);
@@ -153,7 +183,13 @@ export async function resolveTelegramInboundBody(params: {
   const locationData = extractTelegramLocation(msg);
   const locationText = locationData ? formatLocationText(locationData) : undefined;
   const rawText = expandTextLinks(messageTextParts.text, messageTextParts.entities).trim();
-  const hasUserText = Boolean(rawText || locationText);
+  const hasMeaningfulUserText =
+    hasMeaningfulTelegramUserText({
+      rawText,
+      cfg,
+      agentId: routeAgentId,
+      botUsername: primaryCtx.me?.username,
+    }) || Boolean(locationText);
   let rawBody = [rawText, locationText].filter(Boolean).join("\n").trim();
   if (!rawBody) {
     rawBody = placeholder;
@@ -163,28 +199,47 @@ export async function resolveTelegramInboundBody(params: {
   }
 
   let bodyText = rawBody;
-  const hasAudio = allMedia.some((media) => media.contentType?.startsWith("audio/"));
+  const audioPreflightMedia = [...allMedia, ...replyMedia];
+  const hasAudio = audioPreflightMedia.some((media) => media.contentType?.startsWith("audio/"));
   const disableAudioPreflight =
     (topicConfig?.disableAudioPreflight ??
       (groupConfig as TelegramGroupConfig | undefined)?.disableAudioPreflight) === true;
+  const hasAnyMention = messageTextParts.entities.some((ent) => ent.type === "mention");
+  const explicitlyMentioned = botUsername ? hasBotMention(msg, botUsername) : false;
+  const botId = primaryCtx.me?.id;
+  const replyFromId = msg.reply_to_message?.from?.id;
+  const replyToBotMessage = botId != null && replyFromId === botId;
+  const isReplyToServiceMessage =
+    replyToBotMessage && isTelegramForumServiceMessage(msg.reply_to_message);
+  const implicitMention = replyToBotMessage && !isReplyToServiceMessage;
 
   let preflightTranscript: string | undefined;
   const needsPreflightTranscription =
     isGroup &&
     requireMention &&
     hasAudio &&
-    !hasUserText &&
+    !hasMeaningfulUserText &&
     mentionRegexes.length > 0 &&
     !disableAudioPreflight;
+  const shouldShowAudioPreflightTyping =
+    options?.forceWasMentioned === true || explicitlyMentioned || implicitMention;
 
   if (needsPreflightTranscription) {
+    let preflightTypingStarted = false;
     try {
+      if (shouldShowAudioPreflightTyping) {
+        await audioPreflightTyping?.onReplyStart?.();
+        preflightTypingStarted = true;
+      }
       const { transcribeFirstAudio } = await import("../media-understanding/audio-preflight.js");
       const tempCtx: MsgContext = {
-        MediaPaths: allMedia.length > 0 ? allMedia.map((m) => m.path) : undefined,
+        MediaPaths:
+          audioPreflightMedia.length > 0
+            ? audioPreflightMedia.map((media) => media.path)
+            : undefined,
         MediaTypes:
-          allMedia.length > 0
-            ? (allMedia.map((m) => m.contentType).filter(Boolean) as string[])
+          audioPreflightMedia.length > 0
+            ? (audioPreflightMedia.map((media) => media.contentType).filter(Boolean) as string[])
             : undefined,
       };
       preflightTranscript = await transcribeFirstAudio({
@@ -194,6 +249,10 @@ export async function resolveTelegramInboundBody(params: {
       });
     } catch (err) {
       logVerbose(`telegram: audio preflight transcription failed: ${String(err)}`);
+    } finally {
+      if (preflightTypingStarted) {
+        audioPreflightTyping?.onCleanup?.();
+      }
     }
   }
 
@@ -209,8 +268,6 @@ export async function resolveTelegramInboundBody(params: {
     }
   }
 
-  const hasAnyMention = messageTextParts.entities.some((ent) => ent.type === "mention");
-  const explicitlyMentioned = botUsername ? hasBotMention(msg, botUsername) : false;
   const computedWasMentioned = matchesMentionWithExplicit({
     text: messageTextParts.text,
     mentionRegexes,
@@ -233,12 +290,6 @@ export async function resolveTelegramInboundBody(params: {
     return null;
   }
 
-  const botId = primaryCtx.me?.id;
-  const replyFromId = msg.reply_to_message?.from?.id;
-  const replyToBotMessage = botId != null && replyFromId === botId;
-  const isReplyToServiceMessage =
-    replyToBotMessage && isTelegramForumServiceMessage(msg.reply_to_message);
-  const implicitMention = replyToBotMessage && !isReplyToServiceMessage;
   const canDetectMention = Boolean(botUsername) || mentionRegexes.length > 0;
   const mentionGate = resolveMentionGatingWithBypass({
     isGroup,
@@ -276,6 +327,7 @@ export async function resolveTelegramInboundBody(params: {
     historyKey,
     commandAuthorized,
     effectiveWasMentioned,
+    explicitInvokeForTyping: shouldShowAudioPreflightTyping,
     canDetectMention,
     shouldBypassMention: mentionGate.shouldBypassMention,
     stickerCacheHit,

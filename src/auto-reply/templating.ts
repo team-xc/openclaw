@@ -135,6 +135,8 @@ export type MsgContext = {
   /** Platform bot username when command mentions should be normalized. */
   BotUsername?: string;
   WasMentioned?: boolean;
+  /** Internal: explicit user invoke signal for early typing in group chats. */
+  ExplicitInvokeForTyping?: boolean;
   CommandAuthorized?: boolean;
   CommandSource?: "text" | "native";
   CommandTargetSessionKey?: string;

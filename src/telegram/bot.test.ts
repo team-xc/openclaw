@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { escapeRegExp, formatEnvelopeTimestamp } from "../../test/helpers/envelope-timestamp.js";
 import { expectInboundContextContract } from "../../test/helpers/inbound-contract.js";
 import { listNativeCommandSpecsForConfig } from "../auto-reply/commands-registry.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { loadSessionStore } from "../config/sessions.js";
 import { normalizeTelegramCommandName } from "../config/telegram-custom-commands.js";
 import {
@@ -67,7 +68,7 @@ describe("createTelegramBot", () => {
           ],
         },
       },
-    };
+    } satisfies OpenClawConfig;
     loadConfig.mockReturnValue(config);
 
     createTelegramBot({
@@ -115,7 +116,7 @@ describe("createTelegramBot", () => {
           ],
         },
       },
-    };
+    } satisfies OpenClawConfig;
     loadConfig.mockReturnValue(config);
 
     createTelegramBot({
@@ -167,7 +168,7 @@ describe("createTelegramBot", () => {
           ],
         },
       },
-    };
+    } satisfies OpenClawConfig;
     loadConfig.mockReturnValue(config);
 
     createTelegramBot({
@@ -924,7 +925,7 @@ describe("createTelegramBot", () => {
         }),
     );
     try {
-      createTelegramBot({ token: "tok" });
+      createTelegramBot({ token: "tok", proxyFetch: fetchSpy as unknown as typeof fetch });
       const handler = getOnHandler("message") as (ctx: Record<string, unknown>) => Promise<void>;
 
       await handler({
@@ -1029,7 +1030,7 @@ describe("createTelegramBot", () => {
     );
     const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
     try {
-      createTelegramBot({ token: "tok" });
+      createTelegramBot({ token: "tok", proxyFetch: fetchSpy as unknown as typeof fetch });
       const handler = getOnHandler("message") as (ctx: Record<string, unknown>) => Promise<void>;
 
       await handler({

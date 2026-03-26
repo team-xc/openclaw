@@ -161,6 +161,66 @@ describe("runPreparedReply media-only handling", () => {
     vi.clearAllMocks();
   });
 
+  it("does not treat transcript-only Telegram group mentions as typing triggers", async () => {
+    await runPreparedReply(
+      baseParams({
+        ctx: {
+          ...baseParams().ctx,
+          Provider: "telegram",
+          Surface: "telegram",
+          OriginatingChannel: "telegram",
+          ChatType: "group",
+          WasMentioned: true,
+          ExplicitInvokeForTyping: false,
+        },
+        sessionCtx: {
+          ...baseParams().sessionCtx,
+          Provider: "telegram",
+          Surface: "telegram",
+          OriginatingChannel: "telegram",
+          ChatType: "group",
+        },
+      }),
+    );
+
+    expect(resolveTypingMode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isGroupChat: true,
+        wasMentioned: false,
+      }),
+    );
+  });
+
+  it("keeps explicit Telegram group invokes as typing triggers", async () => {
+    await runPreparedReply(
+      baseParams({
+        ctx: {
+          ...baseParams().ctx,
+          Provider: "telegram",
+          Surface: "telegram",
+          OriginatingChannel: "telegram",
+          ChatType: "group",
+          WasMentioned: true,
+          ExplicitInvokeForTyping: true,
+        },
+        sessionCtx: {
+          ...baseParams().sessionCtx,
+          Provider: "telegram",
+          Surface: "telegram",
+          OriginatingChannel: "telegram",
+          ChatType: "group",
+        },
+      }),
+    );
+
+    expect(resolveTypingMode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isGroupChat: true,
+        wasMentioned: true,
+      }),
+    );
+  });
+
   it("allows media-only prompts and preserves thread context in queued followups", async () => {
     const result = await runPreparedReply(baseParams());
     expect(result).toEqual({ text: "ok" });

@@ -8,9 +8,10 @@ import { resolveModelRefFromString } from "../../agents/model-selection.js";
 import { resolveAgentTimeoutMs } from "../../agents/timeout.js";
 import { DEFAULT_AGENT_WORKSPACE_DIR, ensureAgentWorkspace } from "../../agents/workspace.js";
 import { resolveChannelModelOverride } from "../../channels/model-overrides.js";
-import { type OpenClawConfig, loadConfig } from "../../config/config.js";
+import { type AgentDefaultsConfig, type OpenClawConfig, loadConfig } from "../../config/config.js";
 import { applyLinkUnderstanding } from "../../link-understanding/apply.js";
 import { applyMediaUnderstanding } from "../../media-understanding/apply.js";
+import { isAudioFileName } from "../../media/mime.js";
 import { defaultRuntime } from "../../runtime.js";
 import { normalizeStringEntries } from "../../shared/string-normalization.js";
 import { resolveCommandAuthorization } from "../command-auth.js";
@@ -27,6 +28,8 @@ import { emitPreAgentMessageHooks } from "./message-preprocess-hooks.js";
 import { applyResetModelOverride } from "./session-reset-model.js";
 import { initSessionState } from "./session.js";
 import { stageSandboxMedia } from "./stage-sandbox-media.js";
+import { resolveTypingMode } from "./typing-mode.js";
+import { resolveRunTypingPolicy } from "./typing-policy.js";
 import { createTypingController } from "./typing.js";
 
 function mergeSkillFilters(channelFilter?: string[], agentFilter?: string[]): string[] | undefined {
@@ -52,6 +55,74 @@ function mergeSkillFilters(channelFilter?: string[], agentFilter?: string[]): st
   }
   const agentSet = new Set(agent);
   return channel.filter((name) => agentSet.has(name));
+}
+const AUDIO_MIME_PREFIX = "audio/";
+
+function hasAudioAttachmentInContext(ctx: MsgContext): boolean {
+  const mediaType = typeof ctx.MediaType === "string" ? ctx.MediaType.trim().toLowerCase() : "";
+  if (mediaType.startsWith(AUDIO_MIME_PREFIX)) {
+    return true;
+  }
+
+  const mediaTypes = Array.isArray(ctx.MediaTypes) ? ctx.MediaTypes : [];
+  if (
+    mediaTypes.some(
+      (entry) =>
+        typeof entry === "string" && entry.trim().toLowerCase().startsWith(AUDIO_MIME_PREFIX),
+    )
+  ) {
+    return true;
+  }
+
+  const mediaRefs = [
+    ...(Array.isArray(ctx.MediaPaths) ? ctx.MediaPaths : []),
+    ...(Array.isArray(ctx.MediaUrls) ? ctx.MediaUrls : []),
+    ctx.MediaPath,
+    ctx.MediaUrl,
+  ];
+  return mediaRefs.some((entry) => typeof entry === "string" && isAudioFileName(entry));
+}
+
+function shouldStartTypingBeforeMediaUnderstanding(params: {
+  ctx: MsgContext;
+  cfg: OpenClawConfig;
+  agentCfg?: AgentDefaultsConfig;
+  sessionCfg?: OpenClawConfig["session"];
+  opts?: GetReplyOptions;
+}): boolean {
+  const channel =
+    params.ctx.OriginatingChannel?.trim().toLowerCase() ??
+    params.ctx.Surface?.trim().toLowerCase() ??
+    params.ctx.Provider?.trim().toLowerCase();
+  if (channel !== "telegram") {
+    return false;
+  }
+  if (!hasAudioAttachmentInContext(params.ctx)) {
+    return false;
+  }
+  if (params.ctx.ChatType === "group" && params.ctx.ExplicitInvokeForTyping !== true) {
+    return false;
+  }
+  if (params.cfg.tools?.media?.audio?.enabled === false) {
+    return false;
+  }
+
+  const isHeartbeat = params.opts?.isHeartbeat === true;
+  const { typingPolicy, suppressTyping } = resolveRunTypingPolicy({
+    requestedPolicy: params.opts?.typingPolicy,
+    suppressTyping: params.opts?.suppressTyping === true,
+    isHeartbeat,
+    originatingChannel: params.ctx.OriginatingChannel,
+  });
+  const typingMode = resolveTypingMode({
+    configured: params.sessionCfg?.typingMode ?? params.agentCfg?.typingMode,
+    isGroupChat: params.ctx.ChatType === "group",
+    wasMentioned: params.ctx.WasMentioned === true,
+    isHeartbeat,
+    typingPolicy,
+    suppressTyping,
+  });
+  return typingMode !== "never";
 }
 
 export async function getReplyFromConfig(
@@ -126,6 +197,17 @@ export async function getReplyFromConfig(
   const finalized = finalizeInboundContext(ctx);
 
   if (!isFastTestEnv) {
+    if (
+      shouldStartTypingBeforeMediaUnderstanding({
+        ctx: finalized,
+        cfg,
+        agentCfg,
+        sessionCfg,
+        opts: resolvedOpts,
+      })
+    ) {
+      await typing.startTypingLoop();
+    }
     await applyMediaUnderstanding({
       ctx: finalized,
       cfg,

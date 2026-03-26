@@ -1,11 +1,12 @@
 import { ensureConfiguredAcpRouteReady } from "../acp/persistent-bindings.route.js";
 import { resolveAckReaction } from "../agents/identity.js";
 import { shouldAckReaction as shouldAckReactionGate } from "../channels/ack-reactions.js";
-import { logInboundDrop } from "../channels/logging.js";
+import { logInboundDrop, logTypingFailure } from "../channels/logging.js";
 import {
   createStatusReactionController,
   type StatusReactionController,
 } from "../channels/status-reactions.js";
+import { createTypingCallbacks } from "../channels/typing.js";
 import { loadConfig } from "../config/config.js";
 import type { TelegramDirectConfig, TelegramGroupConfig } from "../config/types.js";
 import { logVerbose } from "../globals.js";
@@ -184,6 +185,20 @@ export const buildTelegramMessageContext = async ({
     }
   };
 
+  const audioPreflightTyping = createTypingCallbacks({
+    start: sendTyping,
+    keepaliveIntervalMs: 3_000,
+    maxDurationMs: 30_000,
+    onStartError: (err) => {
+      logTypingFailure({
+        log: logVerbose,
+        channel: "telegram",
+        target: String(chatId),
+        error: err,
+      });
+    },
+  });
+
   if (
     !(await enforceTelegramDmAccess({
       isGroup,
@@ -280,6 +295,7 @@ export const buildTelegramMessageContext = async ({
     primaryCtx,
     msg,
     allMedia,
+    replyMedia,
     isGroup,
     chatId,
     senderId,
@@ -295,6 +311,7 @@ export const buildTelegramMessageContext = async ({
     groupHistories,
     historyLimit,
     logger,
+    audioPreflightTyping,
   });
   if (!bodyResult) {
     return null;
@@ -437,6 +454,7 @@ export const buildTelegramMessageContext = async ({
     topicConfig,
     stickerCacheHit: bodyResult.stickerCacheHit,
     effectiveWasMentioned: bodyResult.effectiveWasMentioned,
+    explicitInvokeForTyping: bodyResult.explicitInvokeForTyping,
     locationData: bodyResult.locationData,
     options,
     dmAllowFrom,

@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { MsgContext } from "../templating.js";
-import { registerGetReplyCommonMocks } from "./get-reply.test-mocks.js";
+import {
+  getReplyCommonMockState,
+  registerGetReplyCommonMocks,
+  resetGetReplyCommonMockState,
+} from "./get-reply.test-mocks.js";
 
 const mocks = vi.hoisted(() => ({
   applyMediaUnderstanding: vi.fn(async (..._args: unknown[]) => undefined),
@@ -48,10 +52,17 @@ function buildCtx(overrides: Partial<MsgContext> = {}): MsgContext {
     OriginatingChannel: "telegram",
     OriginatingTo: "telegram:-100123",
     ChatType: "group",
+    ExplicitInvokeForTyping: true,
     Body: "<media:audio>",
     BodyForAgent: "<media:audio>",
     RawBody: "<media:audio>",
     CommandBody: "<media:audio>",
+    MediaPath: "/tmp/voice.ogg",
+    MediaUrl: "/tmp/voice.ogg",
+    MediaType: "audio/ogg",
+    MediaPaths: ["/tmp/voice.ogg"],
+    MediaUrls: ["/tmp/voice.ogg"],
+    MediaTypes: ["audio/ogg"],
     SessionKey: "agent:main:telegram:-100123",
     From: "telegram:user:42",
     To: "telegram:-100123",
@@ -64,6 +75,7 @@ function buildCtx(overrides: Partial<MsgContext> = {}): MsgContext {
 describe("getReplyFromConfig message hooks", () => {
   beforeEach(() => {
     delete process.env.OPENCLAW_TEST_FAST;
+    resetGetReplyCommonMockState();
     mocks.applyMediaUnderstanding.mockReset();
     mocks.applyLinkUnderstanding.mockReset();
     mocks.createInternalHookEvent.mockReset();
@@ -108,6 +120,89 @@ describe("getReplyFromConfig message hooks", () => {
       triggerBodyNormalized: "",
       bodyStripped: "",
     });
+  });
+
+  it("starts typing before media understanding for telegram audio messages", async () => {
+    await getReplyFromConfig(buildCtx(), undefined, {});
+
+    const typingOrder = (
+      getReplyCommonMockState.typingController.startTypingLoop as ReturnType<typeof vi.fn>
+    ).mock.invocationCallOrder[0];
+    const mediaOrder = mocks.applyMediaUnderstanding.mock.invocationCallOrder[0];
+
+    expect(getReplyCommonMockState.typingController.startTypingLoop).toHaveBeenCalledTimes(1);
+    expect(typingOrder).toBeLessThan(mediaOrder);
+  });
+
+  it("does not start early typing for telegram group audio without explicit invoke", async () => {
+    await getReplyFromConfig(
+      buildCtx({
+        ExplicitInvokeForTyping: false,
+        WasMentioned: true,
+      }),
+      undefined,
+      {},
+    );
+
+    expect(getReplyCommonMockState.typingController.startTypingLoop).not.toHaveBeenCalled();
+    expect(mocks.applyMediaUnderstanding).toHaveBeenCalledTimes(1);
+  });
+
+  it("still starts early typing for telegram direct audio without explicit invoke flag", async () => {
+    await getReplyFromConfig(
+      buildCtx({
+        ChatType: "direct",
+        ExplicitInvokeForTyping: undefined,
+        From: "telegram:42",
+        To: "telegram:42",
+        SessionKey: "agent:main:telegram:42",
+      }),
+      undefined,
+      {},
+    );
+
+    expect(getReplyCommonMockState.typingController.startTypingLoop).toHaveBeenCalledTimes(1);
+    expect(mocks.applyMediaUnderstanding).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not start early typing for non-telegram audio messages", async () => {
+    await getReplyFromConfig(
+      buildCtx({
+        Provider: "discord",
+        Surface: "discord",
+        OriginatingChannel: "discord",
+        OriginatingTo: "discord:123",
+        SessionKey: "agent:main:discord:123",
+        To: "discord:123",
+      }),
+      undefined,
+      {},
+    );
+
+    expect(getReplyCommonMockState.typingController.startTypingLoop).not.toHaveBeenCalled();
+    expect(mocks.applyMediaUnderstanding).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not start early typing when audio understanding is disabled", async () => {
+    await getReplyFromConfig(buildCtx(), undefined, {
+      tools: { media: { audio: { enabled: false } } },
+    });
+
+    expect(getReplyCommonMockState.typingController.startTypingLoop).not.toHaveBeenCalled();
+  });
+
+  it("does not start early typing when typing mode resolves to never", async () => {
+    await getReplyFromConfig(buildCtx(), undefined, {
+      session: { typingMode: "never" },
+    });
+
+    expect(getReplyCommonMockState.typingController.startTypingLoop).not.toHaveBeenCalled();
+  });
+
+  it("does not start early typing when typing policy suppresses typing", async () => {
+    await getReplyFromConfig(buildCtx(), { typingPolicy: "system_event" }, {});
+
+    expect(getReplyCommonMockState.typingController.startTypingLoop).not.toHaveBeenCalled();
   });
 
   it("emits transcribed + preprocessed hooks with enriched context", async () => {
