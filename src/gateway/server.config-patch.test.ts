@@ -181,6 +181,114 @@ describe("gateway config methods", () => {
     });
   });
 
+  it("drops redundant Telegram multi-account top-level defaults on config.patch writes", async () => {
+    const { createConfigIO } = await import("../config/config.js");
+    const current = await rpcReq<{
+      hash?: string;
+    }>(requireWs(), "config.get", {});
+    expect(current.ok).toBe(true);
+    expect(typeof current.payload?.hash).toBe("string");
+
+    const seedRaw = JSON.stringify(
+      {
+        gateway: {
+          mode: "local",
+        },
+        channels: {
+          telegram: {
+            enabled: true,
+            defaultAccount: "assistant",
+            dmPolicy: "pairing",
+            groupPolicy: "allowlist",
+            streaming: "partial",
+            accounts: {
+              assistant: {
+                enabled: true,
+                botToken: "token-assistant",
+                dmPolicy: "disabled",
+                groupPolicy: "disabled",
+              },
+              debug: {
+                enabled: true,
+                botToken: "token-debug",
+                dmPolicy: "disabled",
+                groupPolicy: "disabled",
+              },
+            },
+          },
+        },
+      },
+      null,
+      2,
+    );
+
+    const setRes = await rpcReq<{ ok?: boolean }>(requireWs(), "config.set", {
+      raw: seedRaw,
+      baseHash: current.payload?.hash,
+    });
+    expect(setRes.ok).toBe(true);
+
+    const afterSet = await rpcReq<{
+      hash?: string;
+    }>(requireWs(), "config.get", {});
+    expect(afterSet.ok).toBe(true);
+    expect(typeof afterSet.payload?.hash).toBe("string");
+
+    const patchRes = await rpcReq<{ ok?: boolean }>(requireWs(), "config.patch", {
+      raw: JSON.stringify(
+        {
+          skills: {
+            entries: {
+              "1password": {
+                enabled: true,
+              },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+      baseHash: afterSet.payload?.hash,
+    });
+
+    expect(patchRes.ok).toBe(true);
+    const persisted = JSON.parse(await fs.readFile(createConfigIO().configPath, "utf-8")) as {
+      channels?: {
+        telegram?: Record<string, unknown>;
+      };
+      skills?: {
+        entries?: Record<string, unknown>;
+      };
+    };
+    expect(persisted.channels?.telegram).toEqual({
+      enabled: true,
+      defaultAccount: "assistant",
+      accounts: {
+        assistant: {
+          enabled: true,
+          botToken: "token-assistant",
+          dmPolicy: "disabled",
+          groupPolicy: "disabled",
+          streaming: "partial",
+        },
+        debug: {
+          enabled: true,
+          botToken: "token-debug",
+          dmPolicy: "disabled",
+          groupPolicy: "disabled",
+          streaming: "partial",
+        },
+      },
+    });
+    expect(persisted.skills).toEqual({
+      entries: {
+        "1password": {
+          enabled: true,
+        },
+      },
+    });
+  });
+
   it("returns a path-scoped config schema lookup", async () => {
     const res = await rpcReq<{
       path: string;

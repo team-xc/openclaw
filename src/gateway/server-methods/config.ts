@@ -102,6 +102,43 @@ function mergeWriteOptionsWithUnsetPaths(
   };
 }
 
+function pruneRedundantTelegramMultiAccountDefaults(config: OpenClawConfig): OpenClawConfig {
+  const channels = asRecord(config.channels);
+  const telegram = asRecord(channels?.telegram);
+  const accounts = asRecord(telegram?.accounts);
+  if (!telegram || !accounts || Object.keys(accounts).length === 0) {
+    return config;
+  }
+  if (Object.hasOwn(accounts, "default")) {
+    return config;
+  }
+
+  const shouldPrune =
+    telegram.dmPolicy === "pairing" ||
+    telegram.groupPolicy === "allowlist" ||
+    telegram.streaming === "partial";
+  if (!shouldPrune) {
+    return config;
+  }
+
+  const next = structuredClone(config);
+  const nextChannels = asRecord(next.channels);
+  const nextTelegram = asRecord(nextChannels?.telegram);
+  if (!nextTelegram) {
+    return config;
+  }
+  if (nextTelegram.dmPolicy === "pairing") {
+    delete nextTelegram.dmPolicy;
+  }
+  if (nextTelegram.groupPolicy === "allowlist") {
+    delete nextTelegram.groupPolicy;
+  }
+  if (nextTelegram.streaming === "partial") {
+    delete nextTelegram.streaming;
+  }
+  return next;
+}
+
 function prunePathsFromConfigObject(
   config: OpenClawConfig,
   unsetPaths: string[][],
@@ -109,7 +146,7 @@ function prunePathsFromConfigObject(
   if (unsetPaths.length === 0) {
     return config;
   }
-  const next = structuredClone(config) as OpenClawConfig;
+  const next = structuredClone(config);
   for (const unsetPath of unsetPaths) {
     const [root, section, key] = unsetPath;
     if (root !== "channels" || section !== "telegram" || typeof key !== "string") {
@@ -237,7 +274,9 @@ function parseValidateConfigFromRawOrRespond(
   }
   const unsetPaths = collectTelegramTopLevelUnsetPathsFromRaw(parsedRes.parsed);
   return {
-    config: prunePathsFromConfigObject(validated.config, unsetPaths),
+    config: pruneRedundantTelegramMultiAccountDefaults(
+      prunePathsFromConfigObject(validated.config, unsetPaths),
+    ),
     schema,
     unsetPaths,
   };
@@ -497,12 +536,13 @@ export const configHandlers: GatewayRequestHandlers = {
       );
       return;
     }
-    const changedPaths = diffConfigPaths(snapshot.config, validated.config);
+    const nextConfig = pruneRedundantTelegramMultiAccountDefaults(validated.config);
+    const changedPaths = diffConfigPaths(snapshot.config, nextConfig);
     const actor = resolveControlPlaneActor(client);
     context?.logGateway?.info(
       `config.patch write ${formatControlPlaneActor(actor)} changedPaths=${summarizeChangedPaths(changedPaths)} restartReason=config.patch`,
     );
-    await writeConfigFile(validated.config, writeOptions);
+    await writeConfigFile(nextConfig, writeOptions);
 
     const { sessionKey, note, restartDelayMs, deliveryContext, threadId } =
       resolveConfigRestartRequest(params);
@@ -535,7 +575,7 @@ export const configHandlers: GatewayRequestHandlers = {
       {
         ok: true,
         path: createConfigIO().configPath,
-        config: redactConfigObject(validated.config, schemaPatch.uiHints),
+        config: redactConfigObject(nextConfig, schemaPatch.uiHints),
         restart,
         sentinel: {
           path: sentinelPath,

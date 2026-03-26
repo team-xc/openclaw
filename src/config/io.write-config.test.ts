@@ -304,6 +304,87 @@ describe("config io write", () => {
     });
   });
 
+  it("drops redundant Telegram multi-account top-level defaults on incidental writes", async () => {
+    await withSuiteHome(async (home) => {
+      const { configPath, io, snapshot } = await writeConfigAndCreateIo({
+        home,
+        initialConfig: {
+          gateway: { mode: "local" },
+          channels: {
+            telegram: {
+              enabled: true,
+              defaultAccount: "assistant",
+              dmPolicy: "pairing",
+              groupPolicy: "allowlist",
+              streaming: "partial",
+              accounts: {
+                assistant: {
+                  enabled: true,
+                  botToken: "token-assistant",
+                  dmPolicy: "disabled",
+                  groupPolicy: "disabled",
+                },
+                debug: {
+                  enabled: true,
+                  botToken: "token-debug",
+                  dmPolicy: "disabled",
+                  groupPolicy: "disabled",
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const next = structuredClone(snapshot.config);
+      next.skills = {
+        entries: {
+          "1password": {
+            enabled: true,
+          },
+        },
+      };
+
+      await io.writeConfigFile(next);
+
+      const persisted = JSON.parse(await fs.readFile(configPath, "utf-8")) as {
+        channels?: {
+          telegram?: Record<string, unknown>;
+        };
+        skills?: {
+          entries?: Record<string, unknown>;
+        };
+      };
+      expect(persisted.channels?.telegram).toEqual({
+        enabled: true,
+        defaultAccount: "assistant",
+        accounts: {
+          assistant: {
+            enabled: true,
+            botToken: "token-assistant",
+            dmPolicy: "disabled",
+            groupPolicy: "disabled",
+            streaming: "partial",
+          },
+          debug: {
+            enabled: true,
+            botToken: "token-debug",
+            dmPolicy: "disabled",
+            groupPolicy: "disabled",
+            streaming: "partial",
+          },
+        },
+      });
+      expect(persisted.skills).toEqual({
+        entries: {
+          "1password": {
+            enabled: true,
+          },
+        },
+      });
+    });
+  });
+
   it("preserves env var references when writing", async () => {
     await withSuiteHome(async (home) => {
       const { configPath, io, snapshot } = await writeConfigAndCreateIo({

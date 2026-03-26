@@ -299,6 +299,52 @@ function unsetPathForWriteAt(
   };
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function pruneRedundantTelegramMultiAccountDefaultsForWrite(
+  config: OpenClawConfig,
+): OpenClawConfig {
+  const channels = asRecord(config.channels);
+  const telegram = asRecord(channels?.telegram);
+  const accounts = asRecord(telegram?.accounts);
+  if (!telegram || !accounts || Object.keys(accounts).length === 0) {
+    return config;
+  }
+  if (Object.hasOwn(accounts, "default")) {
+    return config;
+  }
+
+  const shouldPrune =
+    telegram.dmPolicy === "pairing" ||
+    telegram.groupPolicy === "allowlist" ||
+    telegram.streaming === "partial";
+  if (!shouldPrune) {
+    return config;
+  }
+
+  const next = structuredClone(config);
+  const nextChannels = asRecord(next.channels);
+  const nextTelegram = asRecord(nextChannels?.telegram);
+  if (!nextTelegram) {
+    return config;
+  }
+  if (nextTelegram.dmPolicy === "pairing") {
+    delete nextTelegram.dmPolicy;
+  }
+  if (nextTelegram.groupPolicy === "allowlist") {
+    delete nextTelegram.groupPolicy;
+  }
+  if (nextTelegram.streaming === "partial") {
+    delete nextTelegram.streaming;
+  }
+  return next;
+}
+
 function unsetPathForWrite(
   root: OpenClawConfig,
   pathSegments: string[],
@@ -1184,6 +1230,7 @@ export function createConfigIO(overrides: ConfigIoDeps = {}) {
         }
       }
     }
+    outputConfig = pruneRedundantTelegramMultiAccountDefaultsForWrite(outputConfig);
     // Do NOT apply runtime defaults when writing — user config should only contain
     // explicitly set values. Runtime defaults are applied when loading (issue #6070).
     const stampedOutputConfig = stampConfigVersion(outputConfig);
