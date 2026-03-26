@@ -253,16 +253,17 @@ export function createChannelManager(opts: ChannelManagerOptions): ChannelManage
               return;
             }
             const attempt = (restartAttempts.get(rKey) ?? 0) + 1;
-            restartAttempts.set(rKey, attempt);
             if (attempt > MAX_RESTART_ATTEMPTS) {
+              restartAttempts.set(rKey, MAX_RESTART_ATTEMPTS);
               setRuntime(channelId, id, {
                 accountId: id,
                 restartPending: false,
-                reconnectAttempts: attempt,
+                reconnectAttempts: MAX_RESTART_ATTEMPTS,
               });
               log.error?.(`[${id}] giving up after ${MAX_RESTART_ATTEMPTS} restart attempts`);
               return;
             }
+            restartAttempts.set(rKey, attempt);
             const delayMs = computeBackoff(CHANNEL_RESTART_POLICY, attempt);
             log.info?.(
               `[${id}] auto-restart attempt ${attempt}/${MAX_RESTART_ATTEMPTS} in ${Math.round(delayMs / 1000)}s`,

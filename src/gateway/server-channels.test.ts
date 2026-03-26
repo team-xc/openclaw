@@ -90,9 +90,9 @@ function installTestRegistry(plugin: ChannelPlugin<TestAccount>) {
 
 function createManager(options?: { channelRuntime?: PluginRuntime["channel"] }) {
   const log = createSubsystemLogger("gateway/server-channels-test");
-  const channelLogs = { discord: log } as Record<ChannelId, SubsystemLogger>;
+  const channelLogs = { discord: log } as unknown as Record<ChannelId, SubsystemLogger>;
   const runtime = runtimeForLogger(log);
-  const channelRuntimeEnvs = { discord: runtime } as Record<ChannelId, RuntimeEnv>;
+  const channelRuntimeEnvs = { discord: runtime } as unknown as Record<ChannelId, RuntimeEnv>;
   return createChannelManager({
     loadConfig: () => ({}),
     channelLogs,
