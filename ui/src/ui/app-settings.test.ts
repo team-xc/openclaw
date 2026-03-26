@@ -1,25 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Tab } from "./navigation.ts";
 import type { ThemeMode, ThemeName } from "./theme.ts";
-
-type Tab =
-  | "agents"
-  | "overview"
-  | "channels"
-  | "instances"
-  | "sessions"
-  | "usage"
-  | "cron"
-  | "skills"
-  | "nodes"
-  | "chat"
-  | "config"
-  | "communications"
-  | "appearance"
-  | "automation"
-  | "infrastructure"
-  | "aiAgents"
-  | "debug"
-  | "logs";
 
 type AppSettingsModule = typeof import("./app-settings.ts");
 

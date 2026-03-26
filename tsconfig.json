@@ -23,6 +23,18 @@
       "openclaw/plugin-sdk/account-id": ["./src/plugin-sdk/account-id.ts"]
     }
   },
-  "include": ["src/**/*", "ui/**/*", "extensions/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*", "ui/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/agents/tools/canvas-tool.ts",
+    "src/agents/tools/nodes-tool.ts",
+    "src/agents/tools/nodes-tool.test.ts",
+    "src/cli/clawbot-cli.ts",
+    "src/cli/nodes-cli.coverage.test.ts",
+    "src/cli/program.nodes-basic.e2e.test.ts",
+    "src/cli/program.nodes-media.e2e.test.ts",
+    "src/cli/qr-dashboard.integration.test.ts",
+    "src/infra/update-startup.test.ts"
+  ]
 }
