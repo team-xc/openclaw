@@ -24,6 +24,7 @@ vi.mock("../../process/exec.js", () => ({
 
 import { ErrorCodes } from "../protocol/index.js";
 import { __resetGatewayBuildStateForTest, gatewayHandlers } from "./gateway.js";
+import type { GatewayClient } from "./types.js";
 
 const ORIGINAL_NVM_DIR = process.env.NVM_DIR;
 const ORIGINAL_HOME = process.env.HOME;
@@ -70,18 +71,25 @@ describe("gateway.restart", () => {
     const respond = vi.fn();
     const client = {
       connect: {
-        client: { id: "control-ui" },
+        minProtocol: 1,
+        maxProtocol: 1,
+        client: {
+          id: "openclaw-control-ui",
+          version: "test",
+          platform: "web",
+          mode: "ui",
+        },
         device: { id: "macbook" },
       },
       clientIp: "127.0.0.1",
-    } as Parameters<(typeof gatewayHandlers)["gateway.restart"]>[0]["client"];
+    } as GatewayClient;
 
     invokeRestart(respond, client);
 
     expect(scheduleGatewaySigusr1Restart).toHaveBeenCalledWith({
       reason: "gateway.restart",
       audit: {
-        actor: "control-ui",
+        actor: "openclaw-control-ui",
         deviceId: "macbook",
         clientIp: "127.0.0.1",
       },
@@ -329,8 +337,9 @@ describe("gateway.build", () => {
   it("rejects concurrent builds", async () => {
     const firstRespond = vi.fn();
     const secondRespond = vi.fn();
-    let resolveBuild: ((value: { stdout: string; stderr: string; code: number }) => void) | null =
-      null;
+    let resolveBuild: (value: { stdout: string; stderr: string; code: number }) => void = () => {
+      throw new Error("expected build promise resolver");
+    };
     resolveOpenClawPackageRoot.mockResolvedValue("/repo/openclaw");
     runCommandWithTimeout.mockImplementation((argv: string[]) => {
       if (argv[0] === "node") {
@@ -352,7 +361,10 @@ describe("gateway.build", () => {
     await invokeBuild(secondRespond);
 
     await vi.waitFor(() => {
-      expect(resolveBuild).not.toBeNull();
+      expect(runCommandWithTimeout).toHaveBeenCalledWith(
+        ["pnpm", "build"],
+        expect.objectContaining({ cwd: "/repo/openclaw" }),
+      );
     });
 
     expect(secondRespond).toHaveBeenCalledWith(
@@ -364,7 +376,7 @@ describe("gateway.build", () => {
       }),
     );
 
-    resolveBuild?.({ stdout: "", stderr: "", code: 0 });
+    resolveBuild({ stdout: "", stderr: "", code: 0 });
     await firstCall;
   });
 });

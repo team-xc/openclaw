@@ -1,43 +1,46 @@
 import { describe, expect, it, vi } from "vitest";
-import { restartGateway, runGatewayBuild } from "./debug.ts";
+import type { GatewayBrowserClient } from "../gateway.ts";
+import { restartGateway, runGatewayBuild, type DebugState } from "./debug.ts";
 
-function createState() {
+function createState(): { state: DebugState; request: ReturnType<typeof vi.fn> } {
+  const request = vi.fn();
   return {
-    client: {
-      request: vi.fn(),
+    request,
+    state: {
+      client: { request } as unknown as GatewayBrowserClient,
+      connected: true,
+      debugLoading: false,
+      debugStatus: null,
+      debugHealth: null,
+      debugModels: [],
+      debugHeartbeat: null,
+      debugCallMethod: "",
+      debugCallParams: "{}",
+      debugCallResult: null,
+      debugCallError: null,
+      debugBuildRunning: false,
+      debugBuildResult: null,
+      debugBuildError: null,
+      debugRestarting: false,
     },
-    connected: true,
-    debugLoading: false,
-    debugStatus: null,
-    debugHealth: null,
-    debugModels: [],
-    debugHeartbeat: null,
-    debugCallMethod: "",
-    debugCallParams: "{}",
-    debugCallResult: null,
-    debugCallError: null,
-    debugBuildRunning: false,
-    debugBuildResult: null,
-    debugBuildError: null,
-    debugRestarting: false,
   };
 }
 
 describe("restartGateway", () => {
   it("keeps restarting state active after a successful restart request", async () => {
-    const state = createState();
-    state.client.request.mockResolvedValue({ ok: true });
+    const { state, request } = createState();
+    request.mockResolvedValue({ ok: true });
 
     await restartGateway(state);
 
-    expect(state.client.request).toHaveBeenCalledWith("gateway.restart", {});
+    expect(request).toHaveBeenCalledWith("gateway.restart", {});
     expect(state.debugRestarting).toBe(true);
     expect(state.debugCallError).toBeNull();
   });
 
   it("clears restarting state when the restart request fails", async () => {
-    const state = createState();
-    state.client.request.mockRejectedValue(new Error("boom"));
+    const { state, request } = createState();
+    request.mockRejectedValue(new Error("boom"));
 
     await restartGateway(state);
 
@@ -48,9 +51,9 @@ describe("restartGateway", () => {
 
 describe("runGatewayBuild", () => {
   it("stores the structured build result without touching manual RPC state", async () => {
-    const state = createState();
+    const { state, request } = createState();
     state.debugCallResult = '{"ok":true}';
-    state.client.request.mockResolvedValue({
+    request.mockResolvedValue({
       ok: true,
       code: 0,
       durationMs: 123,
@@ -63,7 +66,7 @@ describe("runGatewayBuild", () => {
 
     await runGatewayBuild(state);
 
-    expect(state.client.request).toHaveBeenCalledWith("gateway.build", {});
+    expect(request).toHaveBeenCalledWith("gateway.build", {});
     expect(state.debugBuildRunning).toBe(false);
     expect(state.debugBuildResult).toEqual(
       expect.objectContaining({
@@ -77,9 +80,9 @@ describe("runGatewayBuild", () => {
   });
 
   it("stores build request errors separately from manual RPC errors", async () => {
-    const state = createState();
+    const { state, request } = createState();
     state.debugCallError = "rpc failed";
-    state.client.request.mockRejectedValue(new Error("build failed"));
+    request.mockRejectedValue(new Error("build failed"));
 
     await runGatewayBuild(state);
 
