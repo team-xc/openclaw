@@ -26,6 +26,8 @@ import { logVerbose } from "../globals.js";
 import { resolvePreferredOpenClawTmpDir } from "../infra/tmp-openclaw-dir.js";
 import { stripMarkdown } from "../line/markdown-to-line.js";
 import { isVoiceCompatibleAudio } from "../media/audio.js";
+import { resolveAccountEntry } from "../routing/account-lookup.js";
+import { normalizeOptionalAccountId } from "../routing/session-key.js";
 import { CONFIG_DIR, resolveUserPath } from "../utils.js";
 import {
   DEFAULT_OPENAI_BASE_URL,
@@ -258,8 +260,88 @@ function resolveModelOverridePolicy(
   };
 }
 
-export function resolveTtsConfig(cfg: OpenClawConfig): ResolvedTtsConfig {
-  const raw: TtsConfig = cfg.messages?.tts ?? {};
+type TelegramAccountTtsCarrier = {
+  tts?: TtsConfig;
+};
+
+function mergeTtsConfig(base: TtsConfig, override?: TtsConfig): TtsConfig {
+  if (!override) {
+    return base;
+  }
+  return {
+    ...base,
+    ...override,
+    modelOverrides: {
+      ...base.modelOverrides,
+      ...override.modelOverrides,
+    },
+    elevenlabs: {
+      ...base.elevenlabs,
+      ...override.elevenlabs,
+      voiceSettings: {
+        ...base.elevenlabs?.voiceSettings,
+        ...override.elevenlabs?.voiceSettings,
+      },
+    },
+    openai: {
+      ...base.openai,
+      ...override.openai,
+    },
+    edge: {
+      ...base.edge,
+      ...override.edge,
+    },
+  };
+}
+
+function resolveTelegramAccountTtsOverride(params: {
+  cfg: OpenClawConfig;
+  accountId?: string;
+}): TtsConfig | undefined {
+  const accountId = normalizeOptionalAccountId(params.accountId);
+  if (!accountId) {
+    return undefined;
+  }
+  const accounts = params.cfg.channels?.telegram?.accounts as
+    | Record<string, TelegramAccountTtsCarrier>
+    | undefined;
+  return resolveAccountEntry(accounts, accountId)?.tts;
+}
+
+function buildScopedTtsConfig(params: {
+  cfg: OpenClawConfig;
+  channel?: string;
+  accountId?: string;
+}): OpenClawConfig {
+  if (resolveChannelId(params.channel) !== "telegram") {
+    return params.cfg;
+  }
+  const override = resolveTelegramAccountTtsOverride({
+    cfg: params.cfg,
+    accountId: params.accountId,
+  });
+  if (!override) {
+    return params.cfg;
+  }
+  const messages = params.cfg.messages ?? {};
+  return {
+    ...params.cfg,
+    messages: {
+      ...messages,
+      tts: mergeTtsConfig(messages.tts ?? {}, override),
+    },
+  };
+}
+
+export function resolveTtsConfig(
+  cfg: OpenClawConfig,
+  context?: {
+    channel?: string;
+    accountId?: string;
+  },
+): ResolvedTtsConfig {
+  const scopedCfg = context ? buildScopedTtsConfig({ cfg, ...context }) : cfg;
+  const raw: TtsConfig = scopedCfg.messages?.tts ?? {};
   const providerSource = raw.provider ? "config" : "default";
   const edgeOutputFormat = raw.edge?.outputFormat?.trim();
   const auto = normalizeTtsAutoMode(raw.auto) ?? (raw.enabled ? "always" : "off");
@@ -564,9 +646,13 @@ export async function textToSpeech(params: {
   cfg: OpenClawConfig;
   prefsPath?: string;
   channel?: string;
+  accountId?: string;
   overrides?: TtsDirectiveOverrides;
 }): Promise<TtsResult> {
-  const config = resolveTtsConfig(params.cfg);
+  const config = resolveTtsConfig(params.cfg, {
+    channel: params.channel,
+    accountId: params.accountId,
+  });
   const prefsPath = params.prefsPath ?? resolveTtsPrefsPath(config);
   const channelId = resolveChannelId(params.channel);
   const output = resolveOutputFormat(channelId);
@@ -822,11 +908,17 @@ export async function maybeApplyTtsToPayload(params: {
   payload: ReplyPayload;
   cfg: OpenClawConfig;
   channel?: string;
+  accountId?: string;
   kind?: "tool" | "block" | "final";
   inboundAudio?: boolean;
   ttsAuto?: string;
 }): Promise<ReplyPayload> {
-  const config = resolveTtsConfig(params.cfg);
+  const scopedCfg = buildScopedTtsConfig({
+    cfg: params.cfg,
+    channel: params.channel,
+    accountId: params.accountId,
+  });
+  const config = resolveTtsConfig(scopedCfg);
   const prefsPath = resolveTtsPrefsPath(config);
   const autoMode = resolveTtsAutoMode({
     config,
@@ -896,7 +988,7 @@ export async function maybeApplyTtsToPayload(params: {
         const summary = await summarizeText({
           text: textForAudio,
           targetLength: maxLength,
-          cfg: params.cfg,
+          cfg: scopedCfg,
           config,
           timeoutMs: config.timeoutMs,
         });
@@ -924,7 +1016,7 @@ export async function maybeApplyTtsToPayload(params: {
   const ttsStart = Date.now();
   const result = await textToSpeech({
     text: textForAudio,
-    cfg: params.cfg,
+    cfg: scopedCfg,
     prefsPath,
     channel: params.channel,
     overrides: directives.overrides,

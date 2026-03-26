@@ -279,7 +279,11 @@ export const TelegramAccountSchemaBase = z
   })
   .strict();
 
-export const TelegramAccountSchema = TelegramAccountSchemaBase.superRefine((value, ctx) => {
+const TelegramAccountSchemaWithTts = TelegramAccountSchemaBase.extend({
+  tts: TtsConfigSchema.optional(),
+});
+
+export const TelegramAccountSchema = TelegramAccountSchemaWithTts.superRefine((value, ctx) => {
   normalizeTelegramStreamingConfig(value);
   // Account-level schemas skip allowFrom validation because accounts inherit
   // allowFrom from the parent channel config at runtime (resolveTelegramAccount

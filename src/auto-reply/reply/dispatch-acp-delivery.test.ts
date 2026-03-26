@@ -26,18 +26,24 @@ function createDispatcher(): ReplyDispatcher {
   };
 }
 
-function createCoordinator(onReplyStart?: (...args: unknown[]) => Promise<void>) {
+function createCoordinator(
+  onReplyStart?: (...args: unknown[]) => Promise<void>,
+  ctxOverrides?: Record<string, unknown>,
+  paramsOverrides?: Partial<Parameters<typeof createAcpDispatchDeliveryCoordinator>[0]>,
+) {
   return createAcpDispatchDeliveryCoordinator({
     cfg: createAcpTestConfig(),
     ctx: buildTestCtx({
       Provider: "discord",
       Surface: "discord",
       SessionKey: "agent:codex-acp:session-1",
+      ...ctxOverrides,
     }),
     dispatcher: createDispatcher(),
     inboundAudio: false,
     shouldRouteToOriginating: false,
     ...(onReplyStart ? { onReplyStart } : {}),
+    ...paramsOverrides,
   });
 }
 
@@ -71,5 +77,27 @@ describe("createAcpDispatchDeliveryCoordinator", () => {
     await coordinator.deliver("final", {});
 
     expect(onReplyStart).not.toHaveBeenCalled();
+  });
+
+  it("passes Telegram accountId into ACP TTS delivery", async () => {
+    ttsMocks.maybeApplyTtsToPayload.mockClear();
+    const coordinator = createCoordinator(
+      undefined,
+      {
+        Provider: "telegram",
+        Surface: "telegram",
+        AccountId: "bot-work",
+      },
+      { ttsChannel: "telegram" },
+    );
+
+    await coordinator.deliver("final", { text: "hello from acp" });
+
+    expect(ttsMocks.maybeApplyTtsToPayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "bot-work",
+        channel: "telegram",
+      }),
+    );
   });
 });

@@ -225,6 +225,16 @@ function collectTelegramAssignments(params: {
     return;
   }
   for (const { accountId, account, enabled } of surface.accounts) {
+    if (hasOwnProperty(account, "tts") && isRecord(account.tts)) {
+      collectTtsApiKeyAssignments({
+        tts: account.tts,
+        pathPrefix: `channels.telegram.accounts.${accountId}.tts`,
+        defaults: params.defaults,
+        context: params.context,
+        active: enabled,
+        inactiveReason: "Telegram account is disabled.",
+      });
+    }
     if (!hasOwnProperty(account, "webhookSecret")) {
       continue;
     }

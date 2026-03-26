@@ -418,6 +418,7 @@ export async function dispatchReplyFromConfig(params: {
               payload,
               cfg,
               channel: ttsChannel,
+              accountId: ctx.AccountId,
               kind: "tool",
               inboundAudio,
               ttsAuto: sessionTtsAuto,
@@ -454,6 +455,7 @@ export async function dispatchReplyFromConfig(params: {
               payload,
               cfg,
               channel: ttsChannel,
+              accountId: ctx.AccountId,
               kind: "block",
               inboundAudio,
               ttsAuto: sessionTtsAuto,
@@ -510,6 +512,7 @@ export async function dispatchReplyFromConfig(params: {
         payload: reply,
         cfg,
         channel: ttsChannel,
+        accountId: ctx.AccountId,
         kind: "final",
         inboundAudio,
         ttsAuto: sessionTtsAuto,
@@ -541,7 +544,8 @@ export async function dispatchReplyFromConfig(params: {
       }
     }
 
-    const ttsMode = resolveTtsConfig(cfg).mode ?? "final";
+    const ttsMode =
+      resolveTtsConfig(cfg, { channel: ttsChannel, accountId: ctx.AccountId }).mode ?? "final";
     // Generate TTS-only reply after block streaming completes (when there's no final reply).
     // This handles the case where block streaming succeeds and drops final payloads,
     // but we still want TTS audio to be generated from the accumulated block content.
@@ -556,6 +560,7 @@ export async function dispatchReplyFromConfig(params: {
           payload: { text: accumulatedBlockText },
           cfg,
           channel: ttsChannel,
+          accountId: ctx.AccountId,
           kind: "final",
           inboundAudio,
           ttsAuto: sessionTtsAuto,

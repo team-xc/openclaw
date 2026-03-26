@@ -11,6 +11,7 @@ import type {
 import type { ChannelHeartbeatVisibilityConfig } from "./types.channels.js";
 import type { DmConfig, ProviderCommandsConfig } from "./types.messages.js";
 import type { GroupToolPolicyBySenderConfig, GroupToolPolicyConfig } from "./types.tools.js";
+import type { TtsConfig } from "./types.tts.js";
 
 export type TelegramActionConfig = {
   reactions?: boolean;
@@ -80,6 +81,8 @@ export type TelegramAccountConfig = {
   capabilities?: TelegramCapabilitiesConfig;
   /** Telegram-native exec approval delivery + approver authorization. */
   execApprovals?: TelegramExecApprovalConfig;
+  /** Per-account TTS overrides merged with messages.tts. */
+  tts?: TtsConfig;
   /** Markdown formatting overrides (tables). */
   markdown?: MarkdownConfig;
   /** Override native command registration for Telegram and control the Telegram menu surface. */
@@ -270,4 +273,4 @@ export type TelegramConfig = {
   accounts?: Record<string, TelegramAccountConfig>;
   /** Optional default account id when multiple accounts are configured. */
   defaultAccount?: string;
-} & TelegramAccountConfig;
+} & Omit<TelegramAccountConfig, "tts">;

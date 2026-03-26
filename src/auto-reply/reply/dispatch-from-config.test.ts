@@ -69,7 +69,7 @@ const ttsMocks = vi.hoisted(() => {
     normalizeTtsAutoMode: vi.fn((value: unknown) =>
       typeof value === "string" ? value : undefined,
     ),
-    resolveTtsConfig: vi.fn((_cfg: OpenClawConfig) => ({ mode: "final" })),
+    resolveTtsConfig: vi.fn((_cfg: OpenClawConfig, _context?: unknown) => ({ mode: "final" })),
   };
 });
 
@@ -142,7 +142,8 @@ vi.mock("../../infra/outbound/session-binding-service.js", async (importOriginal
 vi.mock("../../tts/tts.js", () => ({
   maybeApplyTtsToPayload: (params: unknown) => ttsMocks.maybeApplyTtsToPayload(params),
   normalizeTtsAutoMode: (value: unknown) => ttsMocks.normalizeTtsAutoMode(value),
-  resolveTtsConfig: (cfg: OpenClawConfig) => ttsMocks.resolveTtsConfig(cfg),
+  resolveTtsConfig: (cfg: OpenClawConfig, context?: unknown) =>
+    ttsMocks.resolveTtsConfig(cfg, context),
 }));
 
 const { dispatchReplyFromConfig } = await import("./dispatch-from-config.js");
@@ -236,6 +237,35 @@ describe("dispatchReplyFromConfig", () => {
       mode: "final",
     });
   });
+  it("passes Telegram account TTS context into reply dispatch", async () => {
+    setNoAbort();
+    const dispatcher = createDispatcher();
+    const ctx = buildTestCtx({
+      Provider: "telegram",
+      Surface: "telegram",
+      AccountId: "ops",
+    });
+
+    const replyResolver = async () => ({ text: "hello from account tts" }) satisfies ReplyPayload;
+
+    await dispatchReplyFromConfig({ ctx, cfg: emptyConfig, dispatcher, replyResolver });
+
+    expect(ttsMocks.maybeApplyTtsToPayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: "telegram",
+        accountId: "ops",
+        kind: "final",
+      }),
+    );
+    expect(ttsMocks.resolveTtsConfig).toHaveBeenCalledWith(
+      emptyConfig,
+      expect.objectContaining({
+        channel: "telegram",
+        accountId: "ops",
+      }),
+    );
+  });
+
   it("does not route when Provider matches OriginatingChannel (even if Surface is missing)", async () => {
     setNoAbort();
     mocks.routeReply.mockClear();

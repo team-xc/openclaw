@@ -45,6 +45,46 @@ describe("secrets runtime snapshot", () => {
 
   const allowInsecureTempSecretFile = process.platform === "win32";
 
+  it("resolves Telegram account-level TTS secrets", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          telegram: {
+            accounts: {
+              work: {
+                tts: {
+                  openai: {
+                    apiKey: { source: "env", provider: "default", id: "TELEGRAM_WORK_TTS_OPENAI" },
+                  },
+                  elevenlabs: {
+                    apiKey: {
+                      source: "env",
+                      provider: "default",
+                      id: "TELEGRAM_WORK_TTS_ELEVENLABS",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      env: {
+        TELEGRAM_WORK_TTS_OPENAI: "telegram-work-openai-key",
+        TELEGRAM_WORK_TTS_ELEVENLABS: "telegram-work-elevenlabs-key",
+      },
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.telegram?.accounts?.work?.tts?.openai?.apiKey).toBe(
+      "telegram-work-openai-key",
+    );
+    expect(snapshot.config.channels?.telegram?.accounts?.work?.tts?.elevenlabs?.apiKey).toBe(
+      "telegram-work-elevenlabs-key",
+    );
+  });
+
   it("resolves env refs for config and auth profiles", async () => {
     const config = asConfig({
       agents: {
@@ -1804,6 +1844,51 @@ describe("secrets runtime snapshot", () => {
     expect(snapshot.config.channels?.telegram?.accounts?.work?.botToken).toBe("");
     expect(snapshot.warnings.map((warning) => warning.path)).not.toContain(
       "channels.telegram.botToken",
+    );
+  });
+
+  it("resolves Telegram account TTS provider keys", async () => {
+    const snapshot = await prepareSecretsRuntimeSnapshot({
+      config: asConfig({
+        channels: {
+          telegram: {
+            accounts: {
+              work: {
+                enabled: true,
+                tts: {
+                  openai: {
+                    apiKey: {
+                      source: "env",
+                      provider: "default",
+                      id: "TELEGRAM_WORK_TTS_OPENAI",
+                    },
+                  },
+                  elevenlabs: {
+                    apiKey: {
+                      source: "env",
+                      provider: "default",
+                      id: "TELEGRAM_WORK_TTS_ELEVENLABS",
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      env: {
+        TELEGRAM_WORK_TTS_OPENAI: "telegram-work-tts-openai",
+        TELEGRAM_WORK_TTS_ELEVENLABS: "telegram-work-tts-elevenlabs",
+      },
+      agentDirs: ["/tmp/openclaw-agent-main"],
+      loadAuthStore: () => ({ version: 1, profiles: {} }),
+    });
+
+    expect(snapshot.config.channels?.telegram?.accounts?.work?.tts?.openai?.apiKey).toBe(
+      "telegram-work-tts-openai",
+    );
+    expect(snapshot.config.channels?.telegram?.accounts?.work?.tts?.elevenlabs?.apiKey).toBe(
+      "telegram-work-tts-elevenlabs",
     );
   });
 

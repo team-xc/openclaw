@@ -84,7 +84,10 @@ export const handleTtsCommands: CommandHandler = async (params, allowTextCommand
     return { shouldContinue: false };
   }
 
-  const config = resolveTtsConfig(params.cfg);
+  const config = resolveTtsConfig(params.cfg, {
+    channel: params.command.channel,
+    accountId: params.ctx.AccountId,
+  });
   const prefsPath = resolveTtsPrefsPath(config);
   const action = parsed.action;
   const args = parsed.args;
@@ -121,6 +124,7 @@ export const handleTtsCommands: CommandHandler = async (params, allowTextCommand
       text: args,
       cfg: params.cfg,
       channel: params.command.channel,
+      accountId: params.ctx.AccountId,
       prefsPath,
     });
 

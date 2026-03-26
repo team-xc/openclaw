@@ -521,6 +521,95 @@ describe("tts", () => {
     });
   });
 
+  describe("resolveTtsConfig – Telegram account overrides", () => {
+    it("merges messages.tts with Telegram account-level overrides", () => {
+      const cfg: OpenClawConfig = {
+        agents: { defaults: { model: { primary: "openai/gpt-4o-mini" } } },
+        messages: {
+          tts: {
+            auto: "always",
+            mode: "final",
+            provider: "openai",
+            openai: {
+              model: "gpt-4o-mini-tts",
+              voice: "alloy",
+            },
+            edge: {
+              enabled: false,
+            },
+          },
+        },
+        channels: {
+          telegram: {
+            accounts: {
+              work: {
+                tts: {
+                  openai: {
+                    voice: "nova",
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const config = resolveTtsConfig(cfg, { channel: "telegram", accountId: "work" });
+
+      expect(config.auto).toBe("always");
+      expect(config.mode).toBe("final");
+      expect(config.provider).toBe("openai");
+      expect(config.openai.model).toBe("gpt-4o-mini-tts");
+      expect(config.openai.voice).toBe("nova");
+      expect(config.edge.enabled).toBe(false);
+    });
+
+    it("keeps different Telegram accounts on different TTS providers and voices", () => {
+      const cfg: OpenClawConfig = {
+        agents: { defaults: { model: { primary: "openai/gpt-4o-mini" } } },
+        messages: {
+          tts: {
+            provider: "edge",
+            edge: {
+              enabled: true,
+              voice: "en-US-MichelleNeural",
+            },
+          },
+        },
+        channels: {
+          telegram: {
+            accounts: {
+              alpha: {
+                tts: {
+                  provider: "openai",
+                  openai: {
+                    voice: "nova",
+                  },
+                },
+              },
+              beta: {
+                tts: {
+                  provider: "elevenlabs",
+                  elevenlabs: {
+                    voiceId: "betaVoiceId1234",
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      const alpha = resolveTtsConfig(cfg, { channel: "telegram", accountId: "alpha" });
+      const beta = resolveTtsConfig(cfg, { channel: "telegram", accountId: "beta" });
+
+      expect(alpha.provider).toBe("openai");
+      expect(alpha.openai.voice).toBe("nova");
+      expect(beta.provider).toBe("elevenlabs");
+      expect(beta.elevenlabs.voiceId).toBe("betaVoiceId1234");
+    });
+  });
+
   describe("resolveTtsConfig – openai.baseUrl", () => {
     const baseCfg: OpenClawConfig = {
       agents: { defaults: { model: { primary: "openai/gpt-4o-mini" } } },

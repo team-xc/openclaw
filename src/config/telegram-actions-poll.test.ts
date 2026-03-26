@@ -33,4 +33,25 @@ describe("telegram poll action config", () => {
 
     expect(res.ok).toBe(true);
   });
+
+  it("accepts channels.telegram.accounts.<id>.tts", () => {
+    const res = validateConfigObject({
+      channels: {
+        telegram: {
+          accounts: {
+            ops: {
+              tts: {
+                provider: "openai",
+                openai: {
+                  voice: "nova",
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(res.ok).toBe(true);
+  });
 });

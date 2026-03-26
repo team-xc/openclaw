@@ -39,7 +39,7 @@ const ttsMocks = vi.hoisted(() => ({
     const params = paramsUnknown as { payload: unknown };
     return params.payload;
   }),
-  resolveTtsConfig: vi.fn((_cfg: OpenClawConfig) => ({ mode: "final" })),
+  resolveTtsConfig: vi.fn((_cfg: OpenClawConfig, _context?: unknown) => ({ mode: "final" })),
 }));
 
 const sessionMetaMocks = vi.hoisted(() => ({
@@ -73,7 +73,8 @@ vi.mock("../../infra/outbound/message-action-runner.js", () => ({
 
 vi.mock("../../tts/tts.js", () => ({
   maybeApplyTtsToPayload: (params: unknown) => ttsMocks.maybeApplyTtsToPayload(params),
-  resolveTtsConfig: (cfg: OpenClawConfig) => ttsMocks.resolveTtsConfig(cfg),
+  resolveTtsConfig: (cfg: OpenClawConfig, context?: unknown) =>
+    ttsMocks.resolveTtsConfig(cfg, context),
 }));
 
 vi.mock("../../acp/runtime/session-meta.js", () => ({
@@ -135,7 +136,10 @@ async function runDispatch(params: {
   shouldRouteToOriginating?: boolean;
   onReplyStart?: () => void;
   ctxOverrides?: Record<string, unknown>;
+  ttsChannel?: string;
 }) {
+  const surface =
+    typeof params.ctxOverrides?.Surface === "string" ? params.ctxOverrides.Surface : "discord";
   return tryDispatchAcpReply({
     ctx: buildTestCtx({
       Provider: "discord",
@@ -148,6 +152,7 @@ async function runDispatch(params: {
     dispatcher: params.dispatcher ?? createDispatcher().dispatcher,
     sessionKey,
     inboundAudio: false,
+    ttsChannel: params.shouldRouteToOriginating ? "telegram" : surface,
     shouldRouteToOriginating: params.shouldRouteToOriginating ?? false,
     ...(params.shouldRouteToOriginating
       ? { originatingChannel: "telegram", originatingTo: "telegram:thread-1" }
@@ -232,6 +237,40 @@ describe("tryDispatchAcpReply", () => {
     sessionMetaMocks.readAcpSessionEntry.mockReturnValue(null);
     bindingServiceMocks.listBySession.mockReset();
     bindingServiceMocks.listBySession.mockReturnValue([]);
+  });
+
+  it("passes Telegram account TTS context through ACP dispatch", async () => {
+    setReadyAcpResolution();
+    managerMocks.runTurn.mockImplementation(
+      async ({ onEvent }: { onEvent: (event: unknown) => Promise<void> }) => {
+        await onEvent({ type: "text_delta", text: "hello", tag: "agent_message_chunk" });
+        await onEvent({ type: "done" });
+      },
+    );
+
+    await runDispatch({
+      bodyForAgent: "reply",
+      ctxOverrides: {
+        Provider: "telegram",
+        Surface: "telegram",
+        AccountId: "ops",
+      },
+      ttsChannel: "telegram",
+    });
+
+    expect(ttsMocks.maybeApplyTtsToPayload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: "telegram",
+        accountId: "ops",
+      }),
+    );
+    expect(ttsMocks.resolveTtsConfig).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        channel: "telegram",
+        accountId: "ops",
+      }),
+    );
   });
 
   it("routes ACP block output to originating channel", async () => {

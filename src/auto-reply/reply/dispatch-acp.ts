@@ -312,7 +312,11 @@ export async function tryDispatchAcpReply(params: {
     });
 
     await projector.flush(true);
-    const ttsMode = resolveTtsConfig(params.cfg).mode ?? "final";
+    const ttsMode =
+      resolveTtsConfig(params.cfg, {
+        channel: params.ttsChannel,
+        accountId: params.ctx.AccountId,
+      }).mode ?? "final";
     const accumulatedBlockText = delivery.getAccumulatedBlockText();
     if (ttsMode === "final" && delivery.getBlockCount() > 0 && accumulatedBlockText.trim()) {
       try {
@@ -320,6 +324,7 @@ export async function tryDispatchAcpReply(params: {
           payload: { text: accumulatedBlockText },
           cfg: params.cfg,
           channel: params.ttsChannel,
+          accountId: params.ctx.AccountId,
           kind: "final",
           inboundAudio: params.inboundAudio,
           ttsAuto: params.sessionTtsAuto,

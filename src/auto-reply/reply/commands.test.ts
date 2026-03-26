@@ -1936,4 +1936,39 @@ describe("handleCommands /tts", () => {
     expect(result.shouldContinue).toBe(false);
     expect(result.reply?.text).toContain("TTS status");
   });
+
+  it("uses Telegram account TTS override for /tts status", async () => {
+    const cfg = {
+      commands: { text: true },
+      channels: {
+        telegram: {
+          accounts: {
+            ops: {
+              tts: {
+                provider: "openai",
+                openai: {
+                  apiKey: "ops-openai-key",
+                },
+              },
+            },
+          },
+        },
+      },
+      messages: {
+        tts: {
+          provider: "edge",
+          prefsPath: path.join(testWorkspaceDir, "tts-telegram.json"),
+        },
+      },
+    } as OpenClawConfig;
+    const params = buildParams("/tts", cfg, {
+      Provider: "telegram",
+      Surface: "telegram",
+      AccountId: "ops",
+    });
+    const result = await handleCommands(params);
+    expect(result.shouldContinue).toBe(false);
+    expect(result.reply?.text).toContain("Provider: openai");
+    expect(result.reply?.text).toContain("configured");
+  });
 });
