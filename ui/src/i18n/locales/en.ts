@@ -555,6 +555,15 @@ export const en: TranslationMap = {
       nameRequiredShort: "Name required.",
     },
   },
+  presenter: {
+    cronState: "{status} · next {next} · last {last}",
+    at: "At {value}",
+    every: "Every {value}",
+    cron: "Cron {value}",
+    system: "System: {value}",
+    agent: "Agent: {value}",
+    last: "last",
+  },
   debug: {
     build: "Build Project",
     building: "Building Project…",

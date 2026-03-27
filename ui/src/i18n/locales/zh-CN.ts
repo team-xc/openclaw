@@ -548,6 +548,15 @@ export const zh_CN: TranslationMap = {
       nameRequiredShort: "名称为必填。",
     },
   },
+  presenter: {
+    cronState: "{status} · 下次 {next} · 上次 {last}",
+    at: "在 {value}",
+    every: "每 {value}",
+    cron: "Cron {value}",
+    system: "系统：{value}",
+    agent: "代理：{value}",
+    last: "上次",
+  },
   debug: {
     build: "构建项目",
     building: "正在构建项目…",

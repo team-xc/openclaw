@@ -148,7 +148,7 @@ function buildChannelOptions(props: CronProps): string[] {
 
 function resolveChannelLabel(props: CronProps, channel: string): string {
   if (channel === "last") {
-    return "last";
+    return t("presenter.last");
   }
   const meta = props.channelMeta?.find((entry) => entry.id === channel);
   if (meta?.label) {
@@ -1605,7 +1605,7 @@ function renderJobPayload(job: CronJob) {
         ? ` (${delivery.to})`
         : ""
       : delivery?.channel || delivery?.to
-        ? ` (${delivery.channel ?? "last"}${delivery.to ? ` -> ${delivery.to}` : ""})`
+        ? ` (${delivery.channel ?? t("presenter.last")}${delivery.to ? ` -> ${delivery.to}` : ""})`
         : "";
 
   return html`
