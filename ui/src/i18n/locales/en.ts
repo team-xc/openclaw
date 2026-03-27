@@ -268,6 +268,13 @@ export const en: TranslationMap = {
     minutes: "{count}m",
     hours: "{count}h",
   },
+  gatewayUrlConfirmation: {
+    title: "Change Gateway URL",
+    subtitle: "This will reconnect to a different gateway server",
+    warning: "Only confirm if you trust this URL. Malicious URLs can compromise your system.",
+    confirm: "Confirm",
+    cancel: "Cancel",
+  },
   instances: {
     title: "Connected Instances",
     subtitle: "Presence beacons from the gateway and clients.",

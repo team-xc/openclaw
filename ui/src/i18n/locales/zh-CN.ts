@@ -267,6 +267,13 @@ export const zh_CN: TranslationMap = {
     minutes: "{count} 分钟",
     hours: "{count} 小时",
   },
+  gatewayUrlConfirmation: {
+    title: "更改网关 URL",
+    subtitle: "这会重新连接到另一个网关服务器",
+    warning: "只有在你信任此 URL 时才确认。恶意 URL 可能会危及你的系统。",
+    confirm: "确认",
+    cancel: "取消",
+  },
   instances: {
     title: "已连接实例",
     subtitle: "来自网关和客户端的在线信标。",
