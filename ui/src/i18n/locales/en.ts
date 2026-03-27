@@ -290,6 +290,8 @@ export const en: TranslationMap = {
     title: "Connected Instances",
     subtitle: "Presence beacons from the gateway and clients.",
     empty: "No instances reported yet.",
+    noInstancesYet: "No instances yet.",
+    noPresencePayload: "No presence payload.",
     lastInput: "Last input {value}",
     lastInputAgo: "{seconds}s ago",
     reason: "Reason {value}",

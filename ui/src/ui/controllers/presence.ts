@@ -1,3 +1,4 @@
+import { t } from "../../i18n/index.ts";
 import type { GatewayBrowserClient } from "../gateway.ts";
 import type { PresenceEntry } from "../types.ts";
 
@@ -24,10 +25,10 @@ export async function loadPresence(state: PresenceState) {
     const res = await state.client.request("system-presence", {});
     if (Array.isArray(res)) {
       state.presenceEntries = res;
-      state.presenceStatus = res.length === 0 ? "No instances yet." : null;
+      state.presenceStatus = res.length === 0 ? t("instances.noInstancesYet") : null;
     } else {
       state.presenceEntries = [];
-      state.presenceStatus = "No presence payload.";
+      state.presenceStatus = t("instances.noPresencePayload");
     }
   } catch (err) {
     state.presenceError = String(err);

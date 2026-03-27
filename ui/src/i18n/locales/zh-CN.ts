@@ -289,6 +289,8 @@ export const zh_CN: TranslationMap = {
     title: "已连接实例",
     subtitle: "来自网关和客户端的在线信标。",
     empty: "尚无实例上报。",
+    noInstancesYet: "暂无实例。",
+    noPresencePayload: "没有在线状态数据。",
     lastInput: "最后输入 {value}",
     lastInputAgo: "{seconds} 秒前",
     reason: "原因 {value}",
