@@ -196,6 +196,9 @@ export const en: TranslationMap = {
       title: "Telegram",
       subtitle: "Bot status and channel configuration.",
     },
+    whatsapp: {
+      loggedOut: "Logged out.",
+    },
     nostrProfile: {
       editProfile: "Edit Profile",
       account: "Account: {accountId}",

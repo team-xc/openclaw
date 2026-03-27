@@ -195,6 +195,9 @@ export const zh_CN: TranslationMap = {
       title: "Telegram",
       subtitle: "机器人状态与频道配置。",
     },
+    whatsapp: {
+      loggedOut: "已退出登录。",
+    },
     nostrProfile: {
       editProfile: "编辑资料",
       account: "账号：{accountId}",
