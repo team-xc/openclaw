@@ -833,6 +833,31 @@ export const en: TranslationMap = {
       calls: "{count} calls",
     },
   },
+  logs: {
+    title: "Logs",
+    subtitle: "Gateway file logs (JSONL).",
+    export: {
+      filtered: "filtered",
+      visible: "visible",
+      filteredFile: "filtered",
+      visibleFile: "visible",
+      button: "Export {label}",
+    },
+    filter: "Filter",
+    searchPlaceholder: "Search logs",
+    autoFollow: "Auto-follow",
+    file: "File: {value}",
+    truncated: "Log output truncated; showing latest chunk.",
+    noEntries: "No log entries.",
+    levels: {
+      trace: "Trace",
+      debug: "Debug",
+      info: "Info",
+      warn: "Warn",
+      error: "Error",
+      fatal: "Fatal",
+    },
+  },
   login: {
     subtitle: "Gateway Dashboard",
     passwordPlaceholder: "optional", // pragma: allowlist secret
