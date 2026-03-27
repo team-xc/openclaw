@@ -346,17 +346,23 @@ export function parseSessionKey(key: string): SessionKeyInfo {
 
   // ── Main session ─────────────────────────────────
   if (key === "main" || key === "agent:main:main") {
-    return { prefix: "", fallbackName: "Main Session" };
+    return { prefix: "", fallbackName: t("chat.sessionNames.main") };
   }
 
   // ── Subagent ─────────────────────────────────────
   if (key.includes(":subagent:")) {
-    return { prefix: "Subagent:", fallbackName: "Subagent:" };
+    return {
+      prefix: t("chat.sessionNames.subagentPrefix"),
+      fallbackName: t("chat.sessionNames.subagentPrefix"),
+    };
   }
 
   // ── Cron job ─────────────────────────────────────
   if (normalized.startsWith("cron:") || key.includes(":cron:")) {
-    return { prefix: "Cron:", fallbackName: "Cron Job:" };
+    return {
+      prefix: t("chat.sessionNames.cronPrefix"),
+      fallbackName: t("chat.sessionNames.cronFallback"),
+    };
   }
 
   // ── Direct chat  (agent:<x>:<channel>:direct:<id>) ──
@@ -373,13 +379,19 @@ export function parseSessionKey(key: string): SessionKeyInfo {
   if (groupMatch) {
     const channel = groupMatch[1];
     const channelLabel = CHANNEL_LABELS[channel] ?? capitalize(channel);
-    return { prefix: "", fallbackName: `${channelLabel} Group` };
+    return {
+      prefix: "",
+      fallbackName: t("chat.sessionNames.channelGroup", { channel: channelLabel }),
+    };
   }
 
   // ── Channel-prefixed legacy keys (e.g. "bluebubbles:g-…") ──
   for (const ch of KNOWN_CHANNEL_KEYS) {
     if (key === ch || key.startsWith(`${ch}:`)) {
-      return { prefix: "", fallbackName: `${CHANNEL_LABELS[ch]} Session` };
+      return {
+        prefix: "",
+        fallbackName: t("chat.sessionNames.channelSession", { channel: CHANNEL_LABELS[ch] }),
+      };
     }
   }
 
@@ -503,14 +515,14 @@ export function renderThemeToggle(state: AppViewState) {
 
   return html`
     <div class="theme-toggle" style="--theme-index: ${index};">
-      <div class="theme-toggle__track" role="group" aria-label="Theme">
+      <div class="theme-toggle__track" role="group" aria-label=${t("common.theme")}>
         <span class="theme-toggle__indicator"></span>
         <button
           class="theme-toggle__button ${state.themeMode === "system" ? "active" : ""}"
           @click=${applyTheme("system")}
           aria-pressed=${state.themeMode === "system"}
-          aria-label="System theme"
-          title="System"
+          aria-label=${t("chat.themeToggle.systemAria")}
+          title=${t("chat.themeToggle.system")}
         >
           ${renderMonitorIcon()}
         </button>
@@ -518,8 +530,8 @@ export function renderThemeToggle(state: AppViewState) {
           class="theme-toggle__button ${state.themeMode === "light" ? "active" : ""}"
           @click=${applyTheme("light")}
           aria-pressed=${state.themeMode === "light"}
-          aria-label="Light theme"
-          title="Light"
+          aria-label=${t("chat.themeToggle.lightAria")}
+          title=${t("chat.themeToggle.light")}
         >
           ${renderSunIcon()}
         </button>
@@ -527,8 +539,8 @@ export function renderThemeToggle(state: AppViewState) {
           class="theme-toggle__button ${state.themeMode === "dark" ? "active" : ""}"
           @click=${applyTheme("dark")}
           aria-pressed=${state.themeMode === "dark"}
-          aria-label="Dark theme"
-          title="Dark"
+          aria-label=${t("chat.themeToggle.darkAria")}
+          title=${t("chat.themeToggle.dark")}
         >
           ${renderMoonIcon()}
         </button>

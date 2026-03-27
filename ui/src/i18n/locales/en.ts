@@ -1090,6 +1090,22 @@ export const en: TranslationMap = {
     loading: "Loading chat…",
     newMessages: "New messages",
     historyNotice: "Showing last {shown} messages ({hidden} hidden).",
+    sessionNames: {
+      main: "Main Session",
+      subagentPrefix: "Subagent:",
+      cronPrefix: "Cron:",
+      cronFallback: "Cron Job:",
+      channelGroup: "{channel} Group",
+      channelSession: "{channel} Session",
+    },
+    themeToggle: {
+      systemAria: "System theme",
+      system: "System",
+      lightAria: "Light theme",
+      light: "Light",
+      darkAria: "Dark theme",
+      dark: "Dark",
+    },
     compaction: {
       active: "Compacting context...",
       complete: "Context compacted",

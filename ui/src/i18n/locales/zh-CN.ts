@@ -1085,6 +1085,22 @@ export const zh_CN: TranslationMap = {
     loading: "聊天加载中…",
     newMessages: "新消息",
     historyNotice: "显示最近 {shown} 条消息（隐藏 {hidden} 条）。",
+    sessionNames: {
+      main: "主会话",
+      subagentPrefix: "子代理：",
+      cronPrefix: "定时任务：",
+      cronFallback: "定时任务：",
+      channelGroup: "{channel} 群组",
+      channelSession: "{channel} 会话",
+    },
+    themeToggle: {
+      systemAria: "系统主题",
+      system: "系统",
+      lightAria: "浅色主题",
+      light: "浅色",
+      darkAria: "深色主题",
+      dark: "深色",
+    },
     compaction: {
       active: "正在压缩上下文…",
       complete: "上下文已压缩",
