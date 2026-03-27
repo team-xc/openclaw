@@ -858,6 +858,20 @@ export const en: TranslationMap = {
       fatal: "Fatal",
     },
   },
+  skills: {
+    title: "Skills",
+    subtitle: "Bundled, managed, and workspace skills.",
+    searchPlaceholder: "Search skills",
+    shown: "{count} shown",
+    noResults: "No skills found.",
+    missing: "Missing: {value}",
+    reason: "Reason: {value}",
+    enable: "Enable",
+    disable: "Disable",
+    installing: "Installing…",
+    apiKey: "API key",
+    saveKey: "Save key",
+  },
   login: {
     subtitle: "Gateway Dashboard",
     passwordPlaceholder: "optional", // pragma: allowlist secret
