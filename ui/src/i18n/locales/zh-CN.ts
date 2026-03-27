@@ -1056,6 +1056,9 @@ export const zh_CN: TranslationMap = {
         onMiss: "未命中时",
         always: "总是",
       },
+      selectNodeBeforeLoad: "请先选择节点，再加载执行审批配置。",
+      hashMissing: "缺少执行审批配置哈希；请刷新后重试。",
+      selectNodeBeforeSave: "请先选择节点，再保存执行审批配置。",
     },
   },
   login: {

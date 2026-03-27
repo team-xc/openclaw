@@ -1061,6 +1061,9 @@ export const en: TranslationMap = {
         onMiss: "On miss",
         always: "Always",
       },
+      selectNodeBeforeLoad: "Select a node before loading exec approvals.",
+      hashMissing: "Exec approvals hash missing; reload and retry.",
+      selectNodeBeforeSave: "Select a node before saving exec approvals.",
     },
   },
   login: {
