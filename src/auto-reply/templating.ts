@@ -137,6 +137,8 @@ export type MsgContext = {
   WasMentioned?: boolean;
   /** Internal: explicit user invoke signal for early typing in group chats. */
   ExplicitInvokeForTyping?: boolean;
+  /** Internal: Telegram group turn should get immediate visible feedback. */
+  EarlyFeedbackEligible?: boolean;
   CommandAuthorized?: boolean;
   CommandSource?: "text" | "native";
   CommandTargetSessionKey?: string;

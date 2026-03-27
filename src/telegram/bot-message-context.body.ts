@@ -53,6 +53,7 @@ export type TelegramInboundBodyResult = {
   commandAuthorized: boolean;
   effectiveWasMentioned: boolean;
   explicitInvokeForTyping: boolean;
+  earlyFeedbackEligible: boolean;
   canDetectMention: boolean;
   shouldBypassMention: boolean;
   stickerCacheHit: boolean;
@@ -279,6 +280,27 @@ export async function resolveTelegramInboundBody(params: {
     transcript: preflightTranscript,
   });
   const wasMentioned = options?.forceWasMentioned === true ? true : computedWasMentioned;
+  const repliesToOtherParticipant = Boolean(msg.reply_to_message) && !replyToBotMessage;
+  const earlyFeedbackEligible =
+    wasMentioned || (isGroup && !requireMention && !hasAnyMention && !repliesToOtherParticipant);
+
+  if (isGroup && !requireMention && !wasMentioned && repliesToOtherParticipant) {
+    logger.info({ chatId, reason: "reply-to-other" }, "skipping group message");
+    recordPendingHistoryEntryIfEnabled({
+      historyMap: groupHistories,
+      historyKey: historyKey ?? "",
+      limit: historyLimit,
+      entry: historyKey
+        ? {
+            sender: buildSenderLabel(msg, senderId || chatId),
+            body: rawBody,
+            timestamp: msg.date ? msg.date * 1000 : undefined,
+            messageId: typeof msg.message_id === "number" ? String(msg.message_id) : undefined,
+          }
+        : null,
+    });
+    return null;
+  }
 
   if (isGroup && commandGate.shouldBlock) {
     logInboundDrop({
@@ -328,6 +350,7 @@ export async function resolveTelegramInboundBody(params: {
     commandAuthorized,
     effectiveWasMentioned,
     explicitInvokeForTyping: shouldShowAudioPreflightTyping,
+    earlyFeedbackEligible,
     canDetectMention,
     shouldBypassMention: mentionGate.shouldBypassMention,
     stickerCacheHit,

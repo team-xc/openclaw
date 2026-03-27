@@ -249,7 +249,7 @@ export async function runPreparedReply(
     ctx.Provider?.trim().toLowerCase();
   const wasMentioned =
     typingChannel === "telegram" && isGroupChat
-      ? ctx.ExplicitInvokeForTyping === true
+      ? ctx.EarlyFeedbackEligible === true
       : ctx.WasMentioned === true;
   const isHeartbeat = opts?.isHeartbeat === true;
   const { typingPolicy, suppressTyping } = resolveRunTypingPolicy({

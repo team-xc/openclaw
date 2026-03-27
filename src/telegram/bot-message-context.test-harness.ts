@@ -22,6 +22,16 @@ type BuildTelegramMessageContextForTestParams = {
   resolveGroupRequireMention?: BuildTelegramMessageContextParams["resolveGroupRequireMention"];
   resolveTelegramGroupConfig?: BuildTelegramMessageContextParams["resolveTelegramGroupConfig"];
   sendChatActionHandler?: BuildTelegramMessageContextParams["sendChatActionHandler"];
+  ackReactionScope?: BuildTelegramMessageContextParams["ackReactionScope"];
+  botApi?: Partial<{
+    sendChatAction: (
+      chatId: number | string,
+      action: string,
+      payload?: unknown,
+    ) => Promise<unknown>;
+    setMessageReaction: (...args: unknown[]) => Promise<unknown>;
+    getChat: (chatId: number | string) => Promise<unknown>;
+  }>;
 };
 
 export async function buildTelegramMessageContextForTest(
@@ -44,8 +54,9 @@ export async function buildTelegramMessageContextForTest(
     options: params.options ?? {},
     bot: {
       api: {
-        sendChatAction: vi.fn(),
-        setMessageReaction: vi.fn(),
+        sendChatAction: params.botApi?.sendChatAction ?? vi.fn(),
+        setMessageReaction: params.botApi?.setMessageReaction ?? vi.fn(),
+        getChat: params.botApi?.getChat,
       },
     } as never,
     cfg: (params.cfg ?? baseTelegramMessageContextConfig) as never,
@@ -55,7 +66,7 @@ export async function buildTelegramMessageContextForTest(
     dmPolicy: "open",
     allowFrom: [],
     groupAllowFrom: [],
-    ackReactionScope: "off",
+    ackReactionScope: params.ackReactionScope ?? "off",
     logger: { info: vi.fn() },
     resolveGroupActivation: params.resolveGroupActivation ?? (() => undefined),
     resolveGroupRequireMention: params.resolveGroupRequireMention ?? (() => false),

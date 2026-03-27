@@ -172,6 +172,7 @@ describe("runPreparedReply media-only handling", () => {
           ChatType: "group",
           WasMentioned: true,
           ExplicitInvokeForTyping: false,
+          EarlyFeedbackEligible: false,
         },
         sessionCtx: {
           ...baseParams().sessionCtx,
@@ -191,6 +192,37 @@ describe("runPreparedReply media-only handling", () => {
     );
   });
 
+  it("treats Telegram early-feedback turns as immediate typing triggers", async () => {
+    await runPreparedReply(
+      baseParams({
+        ctx: {
+          ...baseParams().ctx,
+          Provider: "telegram",
+          Surface: "telegram",
+          OriginatingChannel: "telegram",
+          ChatType: "group",
+          WasMentioned: false,
+          ExplicitInvokeForTyping: false,
+          EarlyFeedbackEligible: true,
+        },
+        sessionCtx: {
+          ...baseParams().sessionCtx,
+          Provider: "telegram",
+          Surface: "telegram",
+          OriginatingChannel: "telegram",
+          ChatType: "group",
+        },
+      }),
+    );
+
+    expect(resolveTypingMode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isGroupChat: true,
+        wasMentioned: true,
+      }),
+    );
+  });
+
   it("keeps explicit Telegram group invokes as typing triggers", async () => {
     await runPreparedReply(
       baseParams({
@@ -202,6 +234,7 @@ describe("runPreparedReply media-only handling", () => {
           ChatType: "group",
           WasMentioned: true,
           ExplicitInvokeForTyping: true,
+          EarlyFeedbackEligible: true,
         },
         sessionCtx: {
           ...baseParams().sessionCtx,

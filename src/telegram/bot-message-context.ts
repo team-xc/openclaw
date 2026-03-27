@@ -338,20 +338,24 @@ export const buildTelegramMessageContext = async ({
     accountId: account.accountId,
   });
   const removeAckAfterReply = cfg.messages?.removeAckAfterReply ?? false;
-  const shouldAckReaction = () =>
-    Boolean(
-      ackReaction &&
-      shouldAckReactionGate({
-        scope: ackReactionScope,
-        isDirect: !isGroup,
-        isGroup,
-        isMentionableGroup: isGroup,
-        requireMention: Boolean(requireMention),
-        canDetectMention: bodyResult.canDetectMention,
-        effectiveWasMentioned: bodyResult.effectiveWasMentioned,
-        shouldBypassMention: bodyResult.shouldBypassMention,
-      }),
-    );
+  const ackReactionEligible = Boolean(
+    ackReaction &&
+    (shouldAckReactionGate({
+      scope: ackReactionScope,
+      isDirect: !isGroup,
+      isGroup,
+      isMentionableGroup: isGroup,
+      requireMention: Boolean(requireMention),
+      canDetectMention: bodyResult.canDetectMention,
+      effectiveWasMentioned: bodyResult.effectiveWasMentioned,
+      shouldBypassMention: bodyResult.shouldBypassMention,
+    }) ||
+      (isGroup &&
+        bodyResult.earlyFeedbackEligible &&
+        ackReactionScope !== "off" &&
+        ackReactionScope !== "none" &&
+        ackReactionScope !== "direct")),
+  );
   const api = bot.api as unknown as {
     setMessageReaction?: (
       chatId: number | string,
@@ -367,7 +371,7 @@ export const buildTelegramMessageContext = async ({
   // Status Reactions controller (lifecycle reactions)
   const statusReactionsConfig = cfg.messages?.statusReactions;
   const statusReactionsEnabled =
-    statusReactionsConfig?.enabled === true && Boolean(reactionApi) && shouldAckReaction();
+    statusReactionsConfig?.enabled === true && Boolean(reactionApi) && ackReactionEligible;
   const resolvedStatusReactionEmojis = resolveTelegramStatusReactionEmojis({
     initialEmoji: ackReaction,
     overrides: statusReactionsConfig?.emojis,
@@ -422,13 +426,13 @@ export const buildTelegramMessageContext = async ({
 
   // When status reactions are enabled, setQueued() replaces the simple ack reaction
   const ackReactionPromise = statusReactionController
-    ? shouldAckReaction()
+    ? ackReactionEligible
       ? Promise.resolve(statusReactionController.setQueued()).then(
           () => true,
           () => false,
         )
       : null
-    : shouldAckReaction() && msg.message_id && reactionApi
+    : ackReactionEligible && msg.message_id && reactionApi
       ? withTelegramApiErrorLogging({
           operation: "setMessageReaction",
           fn: () => reactionApi(chatId, msg.message_id, [{ type: "emoji", emoji: ackReaction }]),
@@ -466,6 +470,7 @@ export const buildTelegramMessageContext = async ({
     stickerCacheHit: bodyResult.stickerCacheHit,
     effectiveWasMentioned: bodyResult.effectiveWasMentioned,
     explicitInvokeForTyping: bodyResult.explicitInvokeForTyping,
+    earlyFeedbackEligible: bodyResult.earlyFeedbackEligible,
     locationData: bodyResult.locationData,
     options,
     dmAllowFrom,
