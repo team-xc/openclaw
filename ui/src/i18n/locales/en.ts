@@ -1138,6 +1138,10 @@ export const en: TranslationMap = {
     export: {
       title: "Chat with {name}",
     },
+    speech: {
+      sttUnsupported: "Speech recognition is not supported in this browser",
+      ttsUnsupported: "Speech synthesis is not supported in this browser",
+    },
   },
   languages: {
     en: "English",

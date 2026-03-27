@@ -3,6 +3,8 @@
  * Falls back gracefully when APIs are unavailable.
  */
 
+import { t } from "../../i18n/index.ts";
+
 // ─── STT (Speech-to-Text) ───
 
 type SpeechRecognitionEvent = Event & {
@@ -51,7 +53,7 @@ let activeRecognition: SpeechRecognitionInstance | null = null;
 export function startStt(callbacks: SttCallbacks): boolean {
   const Ctor = getSpeechRecognitionCtor();
   if (!Ctor) {
-    callbacks.onError?.("Speech recognition is not supported in this browser");
+    callbacks.onError?.(t("chat.speech.sttUnsupported"));
     return false;
   }
 
@@ -142,7 +144,7 @@ export function speakText(
   },
 ): boolean {
   if (!isTtsSupported()) {
-    opts?.onError?.("Speech synthesis is not supported in this browser");
+    opts?.onError?.(t("chat.speech.ttsUnsupported"));
     return false;
   }
 
