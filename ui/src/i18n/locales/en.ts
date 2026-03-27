@@ -513,6 +513,7 @@ export const en: TranslationMap = {
       allSkills: "all skills",
       selectedCount: "{count} selected",
       unavailable: "Unavailable",
+      noConfiguredModels: "No configured models",
     },
     overview: {
       title: "Overview",
