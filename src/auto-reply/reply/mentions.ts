@@ -37,18 +37,37 @@ function normalizeMentionPatterns(patterns: string[]): string[] {
   return patterns.map(normalizeMentionPattern);
 }
 
+function mergeMentionPatternLists(...lists: Array<string[] | undefined>): string[] {
+  const merged: string[] = [];
+  const seen = new Set<string>();
+  for (const list of lists) {
+    for (const pattern of list ?? []) {
+      if (seen.has(pattern)) {
+        continue;
+      }
+      seen.add(pattern);
+      merged.push(pattern);
+    }
+  }
+  return merged;
+}
+
 function resolveMentionPatterns(cfg: OpenClawConfig | undefined, agentId?: string): string[] {
   if (!cfg) {
     return [];
   }
   const agentConfig = agentId ? resolveAgentConfig(cfg, agentId) : undefined;
   const agentGroupChat = agentConfig?.groupChat;
-  if (agentGroupChat && Object.hasOwn(agentGroupChat, "mentionPatterns")) {
-    return agentGroupChat.mentionPatterns ?? [];
-  }
   const globalGroupChat = cfg.messages?.groupChat;
-  if (globalGroupChat && Object.hasOwn(globalGroupChat, "mentionPatterns")) {
-    return globalGroupChat.mentionPatterns ?? [];
+  const globalPatterns =
+    globalGroupChat && Object.hasOwn(globalGroupChat, "mentionPatterns")
+      ? (globalGroupChat.mentionPatterns ?? [])
+      : undefined;
+  if (agentGroupChat && Object.hasOwn(agentGroupChat, "mentionPatterns")) {
+    return mergeMentionPatternLists(agentGroupChat.mentionPatterns ?? [], globalPatterns);
+  }
+  if (globalPatterns) {
+    return globalPatterns;
   }
   const derived = deriveMentionPatterns(agentConfig?.identity);
   return derived.length > 0 ? derived : [];

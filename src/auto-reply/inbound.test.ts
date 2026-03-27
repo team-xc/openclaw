@@ -415,17 +415,17 @@ describe("mention helpers", () => {
     expect(matchesMentionPatterns("OPENCLAW: hi", regexes)).toBe(true);
   });
 
-  it("uses per-agent mention patterns when configured", () => {
+  it("merges per-agent and global mention patterns when both are configured", () => {
     const regexes = buildMentionRegexes(
       {
         messages: {
-          groupChat: { mentionPatterns: ["\\bglobal\\b"] },
+          groupChat: { mentionPatterns: ["\bglobal\b"] },
         },
         agents: {
           list: [
             {
               id: "work",
-              groupChat: { mentionPatterns: ["\\bworkbot\\b"] },
+              groupChat: { mentionPatterns: ["\bworkbot\b"] },
             },
           ],
         },
@@ -433,7 +433,27 @@ describe("mention helpers", () => {
       "work",
     );
     expect(matchesMentionPatterns("workbot: hi", regexes)).toBe(true);
-    expect(matchesMentionPatterns("global: hi", regexes)).toBe(false);
+    expect(matchesMentionPatterns("global: hi", regexes)).toBe(true);
+  });
+
+  it("keeps global mention patterns even when agent mention patterns are explicitly empty", () => {
+    const regexes = buildMentionRegexes(
+      {
+        messages: {
+          groupChat: { mentionPatterns: ["(?:^|\\s)@所有人(?:\\s|$)"] },
+        },
+        agents: {
+          list: [
+            {
+              id: "work",
+              groupChat: { mentionPatterns: [] },
+            },
+          ],
+        },
+      },
+      "work",
+    );
+    expect(matchesMentionPatterns("@所有人 报数", regexes)).toBe(true);
   });
 });
 
