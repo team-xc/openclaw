@@ -140,6 +140,45 @@ describe("buildTelegramMessageContext named-account DM fallback", () => {
     expect(ctx?.ctxPayload?.SessionKey).toBe("agent:main:telegram:atlas:direct:alice-shared");
   });
 
+  it("allows unbound group messages for the configured Telegram default account", async () => {
+    const cfg = {
+      ...baseCfg,
+      channels: {
+        telegram: {
+          defaultAccount: "assistant",
+          accounts: {
+            assistant: {
+              groups: {
+                "-1001234567890": { requireMention: false },
+              },
+            },
+          },
+        },
+      },
+    };
+    setRuntimeConfigSnapshot(cfg);
+
+    const ctx = await buildTelegramMessageContextForTest({
+      cfg,
+      accountId: "assistant",
+      message: {
+        message_id: 1,
+        chat: { id: -1001234567890, type: "supergroup", title: "Test Group" },
+        date: 1700000000,
+        text: "hello everyone",
+        from: { id: 814912386, first_name: "Alice" },
+      },
+      resolveTelegramGroupConfig: () => ({
+        groupConfig: { requireMention: false },
+        topicConfig: undefined,
+      }),
+    });
+
+    expect(ctx).not.toBeNull();
+    expect(ctx?.route.accountId).toBe("assistant");
+    expect(ctx?.route.matchedBy).toBe("default");
+  });
+
   it("still drops named-account group messages without an explicit binding", async () => {
     setRuntimeConfigSnapshot(baseCfg);
 

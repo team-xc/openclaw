@@ -13,6 +13,7 @@ import { logVerbose } from "../globals.js";
 import { recordChannelActivity } from "../infra/channel-activity.js";
 import { buildAgentSessionKey, deriveLastRoutePolicy } from "../routing/resolve-route.js";
 import { DEFAULT_ACCOUNT_ID, resolveThreadSessionKeys } from "../routing/session-key.js";
+import { resolveDefaultTelegramAccountId } from "./accounts.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { firstDefined, normalizeAllowFrom, normalizeDmAllowFromWithStore } from "./bot-access.js";
 import { resolveTelegramInboundBody } from "./bot-message-context.body.js";
@@ -92,9 +93,19 @@ export const buildTelegramMessageContext = async ({
     senderId,
     topicAgentId: topicConfig?.agentId,
   });
+  const defaultTelegramAccountId = resolveDefaultTelegramAccountId(freshCfg);
   const requiresExplicitAccountBinding = (
     candidate: ReturnType<typeof resolveTelegramConversationRoute>["route"],
-  ): boolean => candidate.accountId !== DEFAULT_ACCOUNT_ID && candidate.matchedBy === "default";
+  ): boolean => {
+    if (candidate.matchedBy !== "default") {
+      return false;
+    }
+    // A named Telegram defaultAccount should behave like the canonical default
+    // account for unbound group routing.
+    return (
+      candidate.accountId !== DEFAULT_ACCOUNT_ID && candidate.accountId !== defaultTelegramAccountId
+    );
+  };
   const isNamedAccountFallback = requiresExplicitAccountBinding(route);
   // Named-account groups still require an explicit binding; DMs get a
   // per-account fallback session key below to preserve isolation.
