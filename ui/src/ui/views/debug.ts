@@ -1,4 +1,5 @@
 import { html, nothing } from "lit";
+import { t } from "../../i18n/index.ts";
 import type { EventLogEntry } from "../app-events.ts";
 import type { DebugBuildResult } from "../controllers/debug.ts";
 import { formatEventPayload } from "../presenter.ts";
@@ -35,7 +36,13 @@ export function renderDebug(props: DebugProps) {
   const info = securitySummary?.info ?? 0;
   const securityTone = critical > 0 ? "danger" : warn > 0 ? "warn" : "success";
   const securityLabel =
-    critical > 0 ? `${critical} critical` : warn > 0 ? `${warn} warnings` : "No critical issues";
+    critical > 0
+      ? t("debug.securityCritical", { count: String(critical) })
+      : warn > 0
+        ? t("debug.securityWarnings", { count: String(warn) })
+        : t("debug.securityNoCritical");
+  const securityInfoLabel =
+    info > 0 ? ` · ${t("debug.securityInfo", { count: String(info) })}` : "";
   const buildTone = props.buildResult
     ? props.buildResult.ok
       ? "success"
@@ -49,43 +56,43 @@ export function renderDebug(props: DebugProps) {
       <div class="card">
         <div class="row" style="justify-content: space-between;">
           <div>
-            <div class="card-title">Snapshots</div>
-            <div class="card-sub">Status, health, and heartbeat data.</div>
+            <div class="card-title">${t("debug.snapshotsTitle")}</div>
+            <div class="card-sub">${t("debug.snapshotsSubtitle")}</div>
           </div>
           <button class="btn" ?disabled=${props.loading} @click=${props.onRefresh}>
-            ${props.loading ? "Refreshing…" : "Refresh"}
+            ${props.loading ? t("debug.refreshing") : t("common.refresh")}
           </button>
         </div>
         <div class="stack" style="margin-top: 12px;">
           <div>
-            <div class="muted">Status</div>
+            <div class="muted">${t("debug.status")}</div>
             ${
               securitySummary
                 ? html`<div class="callout ${securityTone}" style="margin-top: 8px;">
-                  Security audit: ${securityLabel}${info > 0 ? ` · ${info} info` : ""}. Run
-                  <span class="mono">openclaw security audit --deep</span> for details.
+                  ${t("debug.securityAuditPrefix")} ${securityLabel}${securityInfoLabel}. ${t("debug.securityAuditRun")}
+                  <span class="mono">openclaw security audit --deep</span> ${t("debug.securityAuditSuffix")}
                 </div>`
                 : nothing
             }
             <pre class="code-block">${JSON.stringify(props.status ?? {}, null, 2)}</pre>
           </div>
           <div>
-            <div class="muted">Health</div>
+            <div class="muted">${t("common.health")}</div>
             <pre class="code-block">${JSON.stringify(props.health ?? {}, null, 2)}</pre>
           </div>
           <div>
-            <div class="muted">Last heartbeat</div>
+            <div class="muted">${t("debug.lastHeartbeat")}</div>
             <pre class="code-block">${JSON.stringify(props.heartbeat ?? {}, null, 2)}</pre>
           </div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title">Manual RPC</div>
-        <div class="card-sub">Send a raw gateway method with JSON params.</div>
+        <div class="card-title">${t("debug.manualRpcTitle")}</div>
+        <div class="card-sub">${t("debug.manualRpcSubtitle")}</div>
         <div class="stack" style="margin-top: 16px;">
           <label class="field">
-            <span>Method</span>
+            <span>${t("debug.method")}</span>
             <select
               .value=${props.callMethod}
               @change=${(e: Event) => props.onCallMethodChange((e.target as HTMLSelectElement).value)}
@@ -93,7 +100,7 @@ export function renderDebug(props: DebugProps) {
               ${
                 !props.callMethod
                   ? html`
-                      <option value="" disabled>Select a method…</option>
+                      <option value="" disabled>${t("debug.selectMethod")}</option>
                     `
                   : nothing
               }
@@ -101,7 +108,7 @@ export function renderDebug(props: DebugProps) {
             </select>
           </label>
           <label class="field">
-            <span>Params (JSON)</span>
+            <span>${t("debug.paramsJson")}</span>
             <textarea
               .value=${props.callParams}
               @input=${(e: Event) =>
@@ -111,7 +118,7 @@ export function renderDebug(props: DebugProps) {
           </label>
         </div>
         <div class="row" style="margin-top: 12px;">
-          <button class="btn primary" @click=${props.onCall}>Call</button>
+          <button class="btn primary" @click=${props.onCall}>${t("debug.call")}</button>
         </div>
         ${
           props.callError
@@ -132,13 +139,13 @@ export function renderDebug(props: DebugProps) {
       props.buildRunning || props.buildResult || props.buildError
         ? html`
             <section class="card" style="margin-top: 18px;">
-              <div class="card-title">Build Status</div>
-              <div class="card-sub">Runs the fixed project build with Node 24 via nvm.</div>
+              <div class="card-title">${t("debug.buildStatusTitle")}</div>
+              <div class="card-sub">${t("debug.buildStatusSubtitle")}</div>
               <div class="stack" style="margin-top: 12px;">
                 ${
                   props.buildRunning
                     ? html`
-                        <div class="callout warn">Build in progress…</div>
+                        <div class="callout warn">${t("debug.buildInProgress")}</div>
                       `
                     : nothing
                 }
@@ -151,30 +158,30 @@ export function renderDebug(props: DebugProps) {
                   props.buildResult
                     ? html`
                         <div class="callout ${buildTone}">
-                          ${props.buildResult.ok ? "Build completed successfully" : "Build failed"}
+                          ${props.buildResult.ok ? t("debug.buildCompleted") : t("debug.buildFailed")}
                         </div>
                         <div class="list" style="margin-top: 8px;">
                           <div class="list-item">
                             <div class="list-main">
-                              <div class="list-title">Command</div>
+                              <div class="list-title">${t("debug.command")}</div>
                               <div class="list-sub mono">${props.buildResult.command}</div>
                             </div>
                           </div>
                           <div class="list-item">
                             <div class="list-main">
-                              <div class="list-title">Working directory</div>
-                              <div class="list-sub mono">${props.buildResult.cwd ?? "n/a"}</div>
+                              <div class="list-title">${t("debug.workingDirectory")}</div>
+                              <div class="list-sub mono">${props.buildResult.cwd ?? t("common.na")}</div>
                             </div>
                           </div>
                           <div class="list-item">
                             <div class="list-main">
-                              <div class="list-title">Exit code</div>
+                              <div class="list-title">${t("debug.exitCode")}</div>
                               <div class="list-sub mono">${String(props.buildResult.code)}</div>
                             </div>
                           </div>
                           <div class="list-item">
                             <div class="list-main">
-                              <div class="list-title">Duration</div>
+                              <div class="list-title">${t("debug.duration")}</div>
                               <div class="list-sub mono">${String(props.buildResult.durationMs)} ms</div>
                             </div>
                           </div>
@@ -183,7 +190,7 @@ export function renderDebug(props: DebugProps) {
                           props.buildResult.stdoutTail
                             ? html`
                                 <div>
-                                  <div class="muted">stdout (tail)</div>
+                                  <div class="muted">${t("debug.stdoutTail")}</div>
                                   <pre class="code-block">${props.buildResult.stdoutTail}</pre>
                                 </div>
                               `
@@ -193,7 +200,7 @@ export function renderDebug(props: DebugProps) {
                           props.buildResult.stderrTail
                             ? html`
                                 <div>
-                                  <div class="muted">stderr (tail)</div>
+                                  <div class="muted">${t("debug.stderrTail")}</div>
                                   <pre class="code-block">${props.buildResult.stderrTail}</pre>
                                 </div>
                               `
@@ -202,7 +209,7 @@ export function renderDebug(props: DebugProps) {
                         ${
                           props.buildResult.truncated
                             ? html`
-                                <div class="muted">Output truncated to the most recent logs.</div>
+                                <div class="muted">${t("debug.outputTruncated")}</div>
                               `
                             : nothing
                         }
@@ -216,8 +223,8 @@ export function renderDebug(props: DebugProps) {
     }
 
     <section class="card" style="margin-top: 18px;">
-      <div class="card-title">Models</div>
-      <div class="card-sub">Catalog from models.list.</div>
+      <div class="card-title">${t("debug.modelsTitle")}</div>
+      <div class="card-sub">${t("debug.modelsSubtitle")}</div>
       <pre class="code-block" style="margin-top: 12px;">${JSON.stringify(
         props.models ?? [],
         null,
@@ -226,12 +233,12 @@ export function renderDebug(props: DebugProps) {
     </section>
 
     <section class="card" style="margin-top: 18px;">
-      <div class="card-title">Event Log</div>
-      <div class="card-sub">Latest gateway events.</div>
+      <div class="card-title">${t("debug.eventLogTitle")}</div>
+      <div class="card-sub">${t("debug.eventLogSubtitle")}</div>
       ${
         props.eventLog.length === 0
           ? html`
-              <div class="muted" style="margin-top: 12px">No events yet.</div>
+              <div class="muted" style="margin-top: 12px">${t("debug.noEvents")}</div>
             `
           : html`
             <div class="list debug-event-log" style="margin-top: 12px;">
