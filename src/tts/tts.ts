@@ -11,8 +11,8 @@ import {
 } from "node:fs";
 import path from "node:path";
 import type { ReplyPayload } from "../auto-reply/types.js";
-import { normalizeChannelId } from "../channels/plugins/index.js";
 import type { ChannelId } from "../channels/plugins/types.js";
+import { normalizeChannelId } from "../channels/registry.js";
 import type { OpenClawConfig } from "../config/config.js";
 import { normalizeResolvedSecretInputString } from "../config/types.secrets.js";
 import type {
