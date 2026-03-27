@@ -960,6 +960,12 @@ export const en: TranslationMap = {
     installing: "Installing…",
     apiKey: "API key",
     saveKey: "Save key",
+    messages: {
+      enabled: "Skill enabled",
+      disabled: "Skill disabled",
+      apiKeySaved: "API key saved",
+      installed: "Installed",
+    },
   },
   nodes: {
     title: "Nodes",

@@ -955,6 +955,12 @@ export const zh_CN: TranslationMap = {
     installing: "安装中…",
     apiKey: "API 密钥",
     saveKey: "保存密钥",
+    messages: {
+      enabled: "技能已启用",
+      disabled: "技能已禁用",
+      apiKeySaved: "API 密钥已保存",
+      installed: "已安装",
+    },
   },
   nodes: {
     title: "节点",
