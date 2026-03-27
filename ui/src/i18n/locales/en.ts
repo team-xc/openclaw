@@ -1138,6 +1138,7 @@ export const en: TranslationMap = {
     export: {
       title: "Chat with {name}",
     },
+    errorWithDetail: "Error: {error}",
     speech: {
       sttUnsupported: "Speech recognition is not supported in this browser",
       ttsUnsupported: "Speech synthesis is not supported in this browser",

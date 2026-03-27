@@ -1133,6 +1133,7 @@ export const zh_CN: TranslationMap = {
     export: {
       title: "与 {name} 的聊天",
     },
+    errorWithDetail: "错误：{error}",
     speech: {
       sttUnsupported: "当前浏览器不支持语音识别",
       ttsUnsupported: "当前浏览器不支持语音合成",

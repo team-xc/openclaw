@@ -1,3 +1,4 @@
+import { t } from "../../i18n/index.ts";
 import { resetToolStream } from "../app-tool-stream.ts";
 import { extractText } from "../chat/message-extract.ts";
 import type { GatewayBrowserClient } from "../gateway.ts";
@@ -232,7 +233,7 @@ export async function sendChatMessage(
       ...state.chatMessages,
       {
         role: "assistant",
-        content: [{ type: "text", text: "Error: " + error }],
+        content: [{ type: "text", text: t("chat.errorWithDetail", { error }) }],
         timestamp: Date.now(),
       },
     ];
