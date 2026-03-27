@@ -33,11 +33,11 @@ export function renderTelegramCard(params: {
         <div class="status-list account-card-status">
           <div>
             <span class="label">${t("channels.status.running")}</span>
-            <span>${renderBool(account.running)}</span>
+            <span>${renderBool(Boolean(account.running))}</span>
           </div>
           <div>
             <span class="label">${t("channels.status.configured")}</span>
-            <span>${renderBool(account.configured)}</span>
+            <span>${renderBool(Boolean(account.configured))}</span>
           </div>
           <div>
             <span class="label">${t("channels.status.lastInbound")}</span>
