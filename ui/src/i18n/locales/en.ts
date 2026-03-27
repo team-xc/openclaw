@@ -169,6 +169,73 @@ export const en: TranslationMap = {
     showCronSessions: "Show cron sessions",
     showCronSessionsHidden: "Show cron sessions ({count} hidden)",
     onboardingDisabled: "Disabled during onboarding",
+    loading: "Loading chat…",
+    newMessages: "New messages",
+    historyNotice: "Showing last {shown} messages ({hidden} hidden).",
+    compaction: {
+      active: "Compacting context...",
+      complete: "Context compacted",
+      divider: "Compaction",
+    },
+    fallback: {
+      active: "Fallback active: {value}",
+      cleared: "Fallback cleared: {value}",
+      details: {
+        selected: "Selected: {value}",
+        active: "Active: {value}",
+        previous: "Previous fallback: {value}",
+        reason: "Reason: {value}",
+        attempts: "Attempts: {value}",
+      },
+    },
+    attachments: {
+      preview: "Attachment preview",
+      remove: "Remove attachment",
+      attachedImage: "Attached image",
+    },
+    sidebar: {
+      title: "Tool Output",
+      close: "Close sidebar",
+      viewRaw: "View Raw Text",
+      empty: "No content available",
+    },
+    queue: {
+      title: "Queued ({count})",
+      imageCount: "Image ({count})",
+      remove: "Remove queued message",
+    },
+    focus: {
+      exit: "Exit focus mode",
+    },
+    compose: {
+      label: "Message",
+      placeholderWithImages: "Add a message or paste more images...",
+      placeholder: "Message (↩ to send, Shift+↩ for line breaks, paste images)",
+      disconnectedPlaceholder: "Connect to the gateway to start chatting…",
+      stop: "Stop",
+      newSession: "New session",
+      queue: "Queue",
+      send: "Send",
+    },
+    labels: {
+      assistant: "Assistant",
+      you: "You",
+      tool: "Tool",
+    },
+    copy: {
+      markdown: "Copy as markdown",
+      copied: "Copied",
+      failed: "Copy failed",
+    },
+    toolCard: {
+      view: "View",
+      completed: "Completed",
+      noOutput: "No output — tool completed successfully.",
+      command: "Command",
+    },
+    export: {
+      title: "Chat with {name}",
+    },
   },
   languages: {
     en: "English",

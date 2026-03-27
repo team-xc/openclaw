@@ -168,6 +168,73 @@ export const zh_CN: TranslationMap = {
     showCronSessions: "显示定时任务会话",
     showCronSessionsHidden: "显示定时任务会话 (已隐藏 {count} 个)",
     onboardingDisabled: "引导期间禁用",
+    loading: "聊天加载中…",
+    newMessages: "新消息",
+    historyNotice: "显示最近 {shown} 条消息（隐藏 {hidden} 条）。",
+    compaction: {
+      active: "正在压缩上下文…",
+      complete: "上下文已压缩",
+      divider: "压缩",
+    },
+    fallback: {
+      active: "回退已启用：{value}",
+      cleared: "回退已清除：{value}",
+      details: {
+        selected: "已选择：{value}",
+        active: "当前生效：{value}",
+        previous: "上一个回退：{value}",
+        reason: "原因：{value}",
+        attempts: "尝试：{value}",
+      },
+    },
+    attachments: {
+      preview: "附件预览",
+      remove: "移除附件",
+      attachedImage: "附加图片",
+    },
+    sidebar: {
+      title: "工具输出",
+      close: "关闭侧边栏",
+      viewRaw: "查看原始文本",
+      empty: "暂无内容",
+    },
+    queue: {
+      title: "队列中 ({count})",
+      imageCount: "图片 ({count})",
+      remove: "移除排队消息",
+    },
+    focus: {
+      exit: "退出专注模式",
+    },
+    compose: {
+      label: "消息",
+      placeholderWithImages: "输入消息或继续粘贴更多图片…",
+      placeholder: "消息 (↩ 发送，Shift+↩ 换行，可粘贴图片)",
+      disconnectedPlaceholder: "连接到网关后即可开始聊天…",
+      stop: "停止",
+      newSession: "新建会话",
+      queue: "排队",
+      send: "发送",
+    },
+    labels: {
+      assistant: "助手",
+      you: "你",
+      tool: "工具",
+    },
+    copy: {
+      markdown: "复制为 Markdown",
+      copied: "已复制",
+      failed: "复制失败",
+    },
+    toolCard: {
+      view: "查看",
+      completed: "已完成",
+      noOutput: "无输出 — 工具已成功完成。",
+      command: "命令",
+    },
+    export: {
+      title: "与 {name} 的聊天",
+    },
   },
   languages: {
     en: "English",

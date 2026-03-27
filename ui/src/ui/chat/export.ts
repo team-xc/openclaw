@@ -1,11 +1,15 @@
 /**
  * Export chat history as markdown file.
  */
+import { t } from "../../i18n/index.ts";
 export function escapeHtmlInMarkdown(text: string): string {
   return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
-export function normalizeSingleLineLabel(label: string, fallback = "Assistant"): string {
+export function normalizeSingleLineLabel(
+  label: string,
+  fallback = t("chat.labels.assistant"),
+): string {
   const normalized = label.replace(/[\r\n\t]+/g, " ").trim();
   return normalized || fallback;
 }
@@ -29,10 +33,15 @@ export function buildChatMarkdown(messages: unknown[], assistantNameRaw: string)
   if (history.length === 0) {
     return null;
   }
-  const lines: string[] = [`# Chat with ${assistantName}`, ""];
+  const lines: string[] = [t("chat.export.title", { name: assistantName }).replace(/^/, "# "), ""];
   for (const msg of history) {
     const m = msg as Record<string, unknown>;
-    const role = m.role === "user" ? "You" : m.role === "assistant" ? assistantName : "Tool";
+    const role =
+      m.role === "user"
+        ? t("chat.labels.you")
+        : m.role === "assistant"
+          ? assistantName
+          : t("chat.labels.tool");
     const content = escapeHtmlInMarkdown(
       typeof m.content === "string"
         ? m.content
