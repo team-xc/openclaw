@@ -139,7 +139,7 @@ export type AgentContext = {
   model: string;
   identityName: string;
   identityEmoji: string;
-  skillsLabel: string;
+  skillsCount: number | null;
   isDefault: boolean;
 };
 
@@ -172,7 +172,7 @@ export function buildAgentContext(
     model: modelLabel,
     identityName,
     identityEmoji,
-    skillsLabel: skillFilter ? `${skillCount} selected` : "all skills",
+    skillsCount: skillCount,
     isDefault: Boolean(defaultId && agent.id === defaultId),
   };
 }
