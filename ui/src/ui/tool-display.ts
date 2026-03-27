@@ -6,6 +6,7 @@ import {
   resolveToolVerbAndDetailForArgs,
   type ToolDisplaySpec as ToolDisplaySpecBase,
 } from "../../../src/agents/tool-display-common.js";
+import { t } from "../i18n/index.ts";
 import type { IconName } from "./icons.ts";
 
 type ToolDisplaySpec = ToolDisplaySpecBase & {
@@ -52,17 +53,35 @@ const SLACK_SPEC: ToolDisplaySpec = {
   icon: "messageSquare",
   title: "Slack",
   actions: {
-    react: { label: "react", detailKeys: ["channelId", "messageId", "emoji"] },
-    reactions: { label: "reactions", detailKeys: ["channelId", "messageId"] },
-    sendMessage: { label: "send", detailKeys: ["to", "content"] },
-    editMessage: { label: "edit", detailKeys: ["channelId", "messageId"] },
-    deleteMessage: { label: "delete", detailKeys: ["channelId", "messageId"] },
-    readMessages: { label: "read messages", detailKeys: ["channelId", "limit"] },
-    pinMessage: { label: "pin", detailKeys: ["channelId", "messageId"] },
-    unpinMessage: { label: "unpin", detailKeys: ["channelId", "messageId"] },
-    listPins: { label: "list pins", detailKeys: ["channelId"] },
-    memberInfo: { label: "member", detailKeys: ["userId"] },
-    emojiList: { label: "emoji list" },
+    react: {
+      label: t("chat.toolActions.slack.react"),
+      detailKeys: ["channelId", "messageId", "emoji"],
+    },
+    reactions: {
+      label: t("chat.toolActions.slack.reactions"),
+      detailKeys: ["channelId", "messageId"],
+    },
+    sendMessage: { label: t("chat.toolActions.slack.send"), detailKeys: ["to", "content"] },
+    editMessage: {
+      label: t("chat.toolActions.slack.edit"),
+      detailKeys: ["channelId", "messageId"],
+    },
+    deleteMessage: {
+      label: t("chat.toolActions.slack.delete"),
+      detailKeys: ["channelId", "messageId"],
+    },
+    readMessages: {
+      label: t("chat.toolActions.slack.readMessages"),
+      detailKeys: ["channelId", "limit"],
+    },
+    pinMessage: { label: t("chat.toolActions.slack.pin"), detailKeys: ["channelId", "messageId"] },
+    unpinMessage: {
+      label: t("chat.toolActions.slack.unpin"),
+      detailKeys: ["channelId", "messageId"],
+    },
+    listPins: { label: t("chat.toolActions.slack.listPins"), detailKeys: ["channelId"] },
+    memberInfo: { label: t("chat.toolActions.slack.member"), detailKeys: ["userId"] },
+    emojiList: { label: t("chat.toolActions.slack.emojiList") },
   },
 };
 

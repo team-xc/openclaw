@@ -1187,6 +1187,21 @@ export const zh_CN: TranslationMap = {
       spawnSession: "新建会话",
       listAgents: "列出代理",
     },
+    toolActions: {
+      slack: {
+        react: "添加反应",
+        reactions: "查看反应",
+        send: "发送",
+        edit: "编辑",
+        delete: "删除",
+        readMessages: "读取消息",
+        pin: "置顶",
+        unpin: "取消置顶",
+        listPins: "查看置顶",
+        member: "成员",
+        emojiList: "表情列表",
+      },
+    },
     export: {
       title: "与 {name} 的聊天",
     },

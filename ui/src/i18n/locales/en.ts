@@ -1192,6 +1192,21 @@ export const en: TranslationMap = {
       spawnSession: "Spawn Session",
       listAgents: "List Agents",
     },
+    toolActions: {
+      slack: {
+        react: "react",
+        reactions: "reactions",
+        send: "send",
+        edit: "edit",
+        delete: "delete",
+        readMessages: "read messages",
+        pin: "pin",
+        unpin: "unpin",
+        listPins: "list pins",
+        member: "member",
+        emojiList: "emoji list",
+      },
+    },
     export: {
       title: "Chat with {name}",
     },
