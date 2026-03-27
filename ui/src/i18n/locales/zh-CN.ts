@@ -969,6 +969,7 @@ export const zh_CN: TranslationMap = {
     requestedAt: "{role} · 申请于 {age}{repair}",
     approve: "批准",
     reject: "拒绝",
+    confirmRejectPairing: "要拒绝这个设备配对请求吗？",
     roles: "角色：{value}",
     scopes: "范围：{value}",
     tokens: "令牌",

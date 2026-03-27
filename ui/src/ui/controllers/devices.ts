@@ -1,3 +1,4 @@
+import { t } from "../../i18n/index.ts";
 import { clearDeviceAuthToken, storeDeviceAuthToken } from "../device-auth.ts";
 import { loadOrCreateDeviceIdentity } from "../device-identity.ts";
 import type { GatewayBrowserClient } from "../gateway.ts";
@@ -90,7 +91,7 @@ export async function rejectDevicePairing(state: DevicesState, requestId: string
   if (!state.client || !state.connected) {
     return;
   }
-  const confirmed = window.confirm("Reject this device pairing request?");
+  const confirmed = window.confirm(t("nodes.confirmRejectPairing"));
   if (!confirmed) {
     return;
   }

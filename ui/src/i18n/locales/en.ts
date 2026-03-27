@@ -974,6 +974,7 @@ export const en: TranslationMap = {
     requestedAt: "{role} · requested {age}{repair}",
     approve: "Approve",
     reject: "Reject",
+    confirmRejectPairing: "Reject this device pairing request?",
     roles: "roles: {value}",
     scopes: "scopes: {value}",
     tokens: "Tokens",
