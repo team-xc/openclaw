@@ -1389,6 +1389,8 @@ export const en: TranslationMap = {
       systemEventTextRequired: "System event text required.",
       agentMessageRequiredShort: "Agent message required.",
       nameRequiredShort: "Name required.",
+      failureAlertAfterInvalid: "Failure alert threshold must be greater than 0.",
+      failureAlertCooldownInvalid: "Cooldown must be 0 or greater.",
     },
   },
   presenter: {

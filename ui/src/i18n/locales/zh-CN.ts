@@ -1378,6 +1378,8 @@ export const zh_CN: TranslationMap = {
       systemEventTextRequired: "系统事件文本为必填。",
       agentMessageRequiredShort: "代理消息为必填。",
       nameRequiredShort: "名称为必填。",
+      failureAlertAfterInvalid: "失败告警阈值必须大于 0。",
+      failureAlertCooldownInvalid: "冷却时间必须大于等于 0。",
     },
   },
   presenter: {
