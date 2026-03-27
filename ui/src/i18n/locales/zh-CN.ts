@@ -255,6 +255,158 @@ export const zh_CN: TranslationMap = {
       custom: "{value}（自定义）",
     },
   },
+  settings: {
+    sidebar: {
+      title: "设置",
+      allSettings: "全部设置",
+    },
+    validity: {
+      unknown: "未知",
+      valid: "有效",
+      invalid: "无效",
+    },
+    search: {
+      placeholder: "搜索设置...",
+      tagFilters: "标签筛选：",
+      addTags: "添加标签",
+    },
+    modes: {
+      form: "表单",
+      raw: "Raw",
+    },
+    status: {
+      unsavedRaw: "有未保存更改",
+      unsavedCount: "{count} 项未保存更改",
+      noChanges: "没有更改",
+    },
+    actions: {
+      apply: "应用",
+      applying: "应用中…",
+      viewPending: "查看 {count} 项待应用更改",
+    },
+    subnav: {
+      all: "全部",
+    },
+    form: {
+      loadingSchema: "正在加载 schema…",
+      unsafeFields: "表单视图无法安全编辑部分字段。请使用 Raw，避免丢失配置项。",
+      rawJson5: "Raw JSON5",
+      schemaUnavailable: "Schema 不可用。",
+      unsupportedSchema: "不支持的 schema。请使用 Raw。",
+      noMatch: "没有设置匹配“{query}”",
+      noSection: "此分区没有设置",
+    },
+    sections: {
+      env: {
+        label: "环境变量",
+        description: "传递给网关进程的环境变量",
+      },
+      update: {
+        label: "更新",
+        description: "自动更新设置与发布通道",
+      },
+      agents: {
+        label: "代理",
+        description: "代理配置、模型与身份",
+      },
+      auth: {
+        label: "认证",
+        description: "API 密钥与认证配置",
+      },
+      channels: {
+        label: "频道",
+        description: "消息频道（Telegram、Discord、Slack 等）",
+      },
+      messages: {
+        label: "消息",
+        description: "消息处理与路由设置",
+      },
+      commands: {
+        label: "命令",
+        description: "自定义斜杠命令",
+      },
+      hooks: {
+        label: "钩子",
+        description: "Webhook 与事件钩子",
+      },
+      skills: {
+        label: "技能",
+        description: "技能包与能力",
+      },
+      tools: {
+        label: "工具",
+        description: "工具配置（浏览器、搜索等）",
+      },
+      gateway: {
+        label: "网关",
+        description: "网关服务设置（端口、鉴权、绑定）",
+      },
+      wizard: {
+        label: "设置向导",
+        description: "设置向导状态与历史",
+      },
+      meta: {
+        label: "元数据",
+        description: "网关元数据与版本信息",
+      },
+      logging: {
+        label: "日志",
+        description: "日志级别与输出配置",
+      },
+      browser: {
+        label: "浏览器",
+        description: "浏览器自动化设置",
+      },
+      ui: {
+        label: "界面",
+        description: "用户界面偏好",
+      },
+      models: {
+        label: "模型",
+        description: "AI 模型配置与提供商",
+      },
+      bindings: {
+        label: "绑定",
+        description: "按键绑定与快捷键",
+      },
+      broadcast: {
+        label: "广播",
+        description: "广播与通知设置",
+      },
+      audio: {
+        label: "音频",
+        description: "音频输入/输出设置",
+      },
+      session: {
+        label: "会话",
+        description: "会话管理与持久化",
+      },
+      cron: {
+        label: "定时任务",
+        description: "计划任务与自动化",
+      },
+      web: {
+        label: "Web",
+        description: "Web 服务与 API 设置",
+      },
+      discovery: {
+        label: "发现",
+        description: "服务发现与网络设置",
+      },
+      canvasHost: {
+        label: "画布宿主",
+        description: "画布渲染与显示",
+      },
+      talk: {
+        label: "对话",
+        description: "语音与说话设置",
+      },
+      plugins: {
+        label: "插件",
+        description: "插件管理与扩展",
+      },
+    },
+  },
   agents: {
     sidebar: {
       title: "代理",

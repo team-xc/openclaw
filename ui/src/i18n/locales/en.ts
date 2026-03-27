@@ -256,6 +256,159 @@ export const en: TranslationMap = {
       custom: "{value} (custom)",
     },
   },
+  settings: {
+    sidebar: {
+      title: "Settings",
+      allSettings: "All Settings",
+    },
+    validity: {
+      unknown: "unknown",
+      valid: "valid",
+      invalid: "invalid",
+    },
+    search: {
+      placeholder: "Search settings...",
+      tagFilters: "Tag filters:",
+      addTags: "Add tags",
+    },
+    modes: {
+      form: "Form",
+      raw: "Raw",
+    },
+    status: {
+      unsavedRaw: "Unsaved changes",
+      unsavedCount: "{count} unsaved changes",
+      noChanges: "No changes",
+    },
+    actions: {
+      apply: "Apply",
+      applying: "Applying…",
+      viewPending: "View {count} pending changes",
+    },
+    subnav: {
+      all: "All",
+    },
+    form: {
+      loadingSchema: "Loading schema…",
+      unsafeFields:
+        "Form view can't safely edit some fields. Use Raw to avoid losing config entries.",
+      rawJson5: "Raw JSON5",
+      schemaUnavailable: "Schema unavailable.",
+      unsupportedSchema: "Unsupported schema. Use Raw.",
+      noMatch: 'No settings match "{query}"',
+      noSection: "No settings in this section",
+    },
+    sections: {
+      env: {
+        label: "Environment Variables",
+        description: "Environment variables passed to the gateway process",
+      },
+      update: {
+        label: "Updates",
+        description: "Auto-update settings and release channel",
+      },
+      agents: {
+        label: "Agents",
+        description: "Agent configurations, models, and identities",
+      },
+      auth: {
+        label: "Authentication",
+        description: "API keys and authentication profiles",
+      },
+      channels: {
+        label: "Channels",
+        description: "Messaging channels (Telegram, Discord, Slack, etc.)",
+      },
+      messages: {
+        label: "Messages",
+        description: "Message handling and routing settings",
+      },
+      commands: {
+        label: "Commands",
+        description: "Custom slash commands",
+      },
+      hooks: {
+        label: "Hooks",
+        description: "Webhooks and event hooks",
+      },
+      skills: {
+        label: "Skills",
+        description: "Skill packs and capabilities",
+      },
+      tools: {
+        label: "Tools",
+        description: "Tool configurations (browser, search, etc.)",
+      },
+      gateway: {
+        label: "Gateway",
+        description: "Gateway server settings (port, auth, binding)",
+      },
+      wizard: {
+        label: "Setup Wizard",
+        description: "Setup wizard state and history",
+      },
+      meta: {
+        label: "Metadata",
+        description: "Gateway metadata and version information",
+      },
+      logging: {
+        label: "Logging",
+        description: "Log levels and output configuration",
+      },
+      browser: {
+        label: "Browser",
+        description: "Browser automation settings",
+      },
+      ui: {
+        label: "UI",
+        description: "User interface preferences",
+      },
+      models: {
+        label: "Models",
+        description: "AI model configurations and providers",
+      },
+      bindings: {
+        label: "Bindings",
+        description: "Key bindings and shortcuts",
+      },
+      broadcast: {
+        label: "Broadcast",
+        description: "Broadcast and notification settings",
+      },
+      audio: {
+        label: "Audio",
+        description: "Audio input/output settings",
+      },
+      session: {
+        label: "Session",
+        description: "Session management and persistence",
+      },
+      cron: {
+        label: "Cron",
+        description: "Scheduled tasks and automation",
+      },
+      web: {
+        label: "Web",
+        description: "Web server and API settings",
+      },
+      discovery: {
+        label: "Discovery",
+        description: "Service discovery and networking",
+      },
+      canvasHost: {
+        label: "Canvas Host",
+        description: "Canvas rendering and display",
+      },
+      talk: {
+        label: "Talk",
+        description: "Voice and speech settings",
+      },
+      plugins: {
+        label: "Plugins",
+        description: "Plugin management and extensions",
+      },
+    },
+  },
   agents: {
     sidebar: {
       title: "Agents",
