@@ -382,6 +382,7 @@ export const en: TranslationMap = {
       keyPlaceholder: "Key",
       removeEntry: "Remove entry",
       jsonValue: "JSON value",
+      configHashMissing: "Config hash missing; reload and retry.",
     },
     sections: {
       env: {

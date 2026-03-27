@@ -380,6 +380,7 @@ export const zh_CN: TranslationMap = {
       keyPlaceholder: "键",
       removeEntry: "移除条目",
       jsonValue: "JSON 值",
+      configHashMissing: "配置哈希缺失，请重新加载后重试。",
     },
     sections: {
       env: {

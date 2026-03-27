@@ -1,3 +1,4 @@
+import { t } from "../../i18n/index.ts";
 import type { GatewayBrowserClient } from "../gateway.ts";
 import type { ConfigSchemaResponse, ConfigSnapshot, ConfigUiHints } from "../types.ts";
 import type { JsonSchema } from "../views/config-form.shared.ts";
@@ -138,7 +139,7 @@ export async function saveConfig(state: ConfigState) {
     const raw = serializeFormForSubmit(state);
     const baseHash = state.configSnapshot?.hash;
     if (!baseHash) {
-      state.lastError = "Config hash missing; reload and retry.";
+      state.lastError = t("settings.form.configHashMissing");
       return;
     }
     await state.client.request("config.set", { raw, baseHash });
@@ -161,7 +162,7 @@ export async function applyConfig(state: ConfigState) {
     const raw = serializeFormForSubmit(state);
     const baseHash = state.configSnapshot?.hash;
     if (!baseHash) {
-      state.lastError = "Config hash missing; reload and retry.";
+      state.lastError = t("settings.form.configHashMissing");
       return;
     }
     await state.client.request("config.apply", {
