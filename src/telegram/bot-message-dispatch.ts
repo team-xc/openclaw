@@ -801,8 +801,40 @@ export const dispatchTelegramMessage = async ({
   }
 
   const hasFinalResponse = queuedFinal || sentFallback;
+  const isSilentNoReply =
+    !hasFinalResponse &&
+    !dispatchError &&
+    deliverySummary.skippedNonSilent === 0 &&
+    deliverySummary.failedNonSilent === 0;
+  const removeTelegramReaction = () =>
+    reactionApi?.(chatId, msg.message_id ?? 0, []) ?? Promise.resolve();
+  const onTelegramReactionCleanupError = (err: unknown) => {
+    if (!msg.message_id) {
+      return;
+    }
+    logAckFailure({
+      log: logVerbose,
+      channel: "telegram",
+      target: `${chatId}/${msg.message_id}`,
+      error: err,
+    });
+  };
 
-  if (statusReactionController && !hasFinalResponse) {
+  if (isSilentNoReply) {
+    if (statusReactionController) {
+      void statusReactionController.clear().catch((err) => {
+        logVerbose(`telegram: status reaction cleanup failed: ${String(err)}`);
+      });
+    } else {
+      removeAckReactionAfterReply({
+        removeAfterReply: true,
+        ackReactionPromise,
+        ackReactionValue: ackReactionPromise ? "ack" : null,
+        remove: removeTelegramReaction,
+        onError: onTelegramReactionCleanupError,
+      });
+    }
+  } else if (statusReactionController && !hasFinalResponse) {
     void statusReactionController.setError().catch((err) => {
       logVerbose(`telegram: status reaction error finalize failed: ${String(err)}`);
     });
@@ -822,18 +854,8 @@ export const dispatchTelegramMessage = async ({
       removeAfterReply: removeAckAfterReply,
       ackReactionPromise,
       ackReactionValue: ackReactionPromise ? "ack" : null,
-      remove: () => reactionApi?.(chatId, msg.message_id ?? 0, []) ?? Promise.resolve(),
-      onError: (err) => {
-        if (!msg.message_id) {
-          return;
-        }
-        logAckFailure({
-          log: logVerbose,
-          channel: "telegram",
-          target: `${chatId}/${msg.message_id}`,
-          error: err,
-        });
-      },
+      remove: removeTelegramReaction,
+      onError: onTelegramReactionCleanupError,
     });
   }
   clearGroupHistory();

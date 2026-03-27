@@ -1910,6 +1910,47 @@ describe("dispatchTelegramMessage draft streaming", () => {
     expect(draftStream.clear).toHaveBeenCalledTimes(1);
   });
 
+  it("clears stale ack reaction when response is NO_REPLY", async () => {
+    const reactionApi = vi.fn().mockResolvedValue(undefined);
+    dispatchReplyWithBufferedBlockDispatcher.mockResolvedValue({
+      queuedFinal: false,
+    });
+
+    await dispatchWithContext({
+      context: createContext({
+        ackReactionPromise: Promise.resolve(true),
+        reactionApi,
+      }),
+      streamMode: "off",
+    });
+    await Promise.resolve();
+
+    expect(reactionApi).toHaveBeenCalledWith(123, 456, []);
+  });
+
+  it("clears stale status reaction when response is NO_REPLY", async () => {
+    const statusReactionController = {
+      setThinking: vi.fn(),
+      clear: vi.fn().mockResolvedValue(undefined),
+      setError: vi.fn().mockResolvedValue(undefined),
+      setDone: vi.fn().mockResolvedValue(undefined),
+    };
+    dispatchReplyWithBufferedBlockDispatcher.mockResolvedValue({
+      queuedFinal: false,
+    });
+
+    await dispatchWithContext({
+      context: createContext({
+        statusReactionController: statusReactionController as never,
+      }),
+      streamMode: "off",
+    });
+    await Promise.resolve();
+
+    expect(statusReactionController.clear).toHaveBeenCalledTimes(1);
+    expect(statusReactionController.setError).not.toHaveBeenCalled();
+  });
+
   it("falls back when all finals are skipped and clears preview", async () => {
     const draftStream = createDraftStream(999);
     createTelegramDraftStream.mockReturnValue(draftStream);
