@@ -526,6 +526,7 @@ export const zh_CN: TranslationMap = {
       selectedCount: "已选 {count} 个",
       unavailable: "不可用",
       noConfiguredModels: "没有已配置模型",
+      currentModel: "当前（{value}）",
     },
     overview: {
       title: "概览",

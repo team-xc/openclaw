@@ -528,6 +528,7 @@ export const en: TranslationMap = {
       selectedCount: "{count} selected",
       unavailable: "Unavailable",
       noConfiguredModels: "No configured models",
+      currentModel: "Current ({value})",
     },
     overview: {
       title: "Overview",
