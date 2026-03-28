@@ -1,3 +1,4 @@
+import { t } from "../../i18n/index.ts";
 import type { GatewayBrowserClient } from "../gateway.ts";
 import type { SessionsUsageResult, CostUsageSummary, SessionUsageTimeSeries } from "../types.ts";
 import type { SessionLogEntry } from "../views/usage.ts";
@@ -179,7 +180,7 @@ function toErrorMessage(err: unknown): string {
       // ignore
     }
   }
-  return "request failed";
+  return t("common.errors.requestFailed");
 }
 
 export async function loadUsage(

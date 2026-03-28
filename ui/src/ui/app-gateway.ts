@@ -3,6 +3,7 @@ import {
   type GatewayUpdateAvailableEventPayload,
 } from "../../../src/gateway/events.js";
 import { ConnectErrorDetailCodes } from "../../../src/gateway/protocol/connect-error-details.js";
+import { t } from "../i18n/index.ts";
 import { CHAT_SESSIONS_ACTIVE_MINUTES, flushChatQueueForEvent } from "./app-chat.ts";
 import type { EventLogEntry } from "./app-events.ts";
 import {
@@ -51,13 +52,13 @@ function isGenericBrowserFetchFailure(message: string): boolean {
 function formatAuthCloseErrorMessage(code: string | null, fallback: string): string {
   const resolvedCode = code ?? "";
   if (resolvedCode === ConnectErrorDetailCodes.AUTH_TOKEN_MISMATCH) {
-    return "unauthorized: gateway token mismatch (open dashboard URL with current token)";
+    return t("common.errors.authTokenMismatch");
   }
   if (resolvedCode === ConnectErrorDetailCodes.AUTH_RATE_LIMITED) {
-    return "unauthorized: too many failed authentication attempts (retry later)";
+    return t("common.errors.authRateLimited");
   }
   if (resolvedCode === ConnectErrorDetailCodes.AUTH_UNAUTHORIZED) {
-    return "unauthorized: authentication failed";
+    return t("common.errors.authUnauthorized");
   }
   return fallback;
 }
@@ -257,7 +258,10 @@ export function connectGateway(host: GatewayHost) {
               : error.message;
           return;
         }
-        host.lastError = `disconnected (${code}): ${reason || "no reason"}`;
+        host.lastError = t("common.errors.disconnected", {
+          code: String(code),
+          reason: reason || t("common.errors.noReason"),
+        });
       } else {
         host.lastError = null;
         host.lastErrorCode = null;
@@ -273,7 +277,10 @@ export function connectGateway(host: GatewayHost) {
       if (host.client !== client) {
         return;
       }
-      host.lastError = `event gap detected (expected seq ${expected}, got ${received}); refresh recommended`;
+      host.lastError = t("common.errors.eventGapDetected", {
+        expected: String(expected),
+        received: String(received),
+      });
       host.lastErrorCode = null;
     },
   });

@@ -28,6 +28,21 @@ export const en: TranslationMap = {
     off: "off",
     optional: "optional",
     unknown: "unknown",
+    errors: {
+      disconnected: "disconnected ({code}): {reason}",
+      noReason: "no reason",
+      eventGapDetected:
+        "event gap detected (expected seq {expected}, got {received}); refresh recommended",
+      requestFailed: "request failed",
+      gatewayNotConnected: "gateway not connected",
+      gatewayClientStopped: "gateway client stopped",
+      connectFailed: "connect failed",
+      authTokenMismatch:
+        "unauthorized: gateway token mismatch (open dashboard URL with current token)",
+      authRateLimited: "unauthorized: too many failed authentication attempts (retry later)",
+      authUnauthorized: "unauthorized: authentication failed",
+      chatError: "chat error",
+    },
   },
   nav: {
     chat: "Chat",

@@ -10,6 +10,7 @@ import {
   readConnectErrorRecoveryAdvice,
   readConnectErrorDetailCode,
 } from "../../../src/gateway/protocol/connect-error-details.js";
+import { t } from "../i18n/index.ts";
 import { clearDeviceAuthToken, loadDeviceAuthToken, storeDeviceAuthToken } from "./device-auth.ts";
 import { loadOrCreateDeviceIdentity, signDevicePayload } from "./device-identity.ts";
 import { generateUUID } from "./uuid.ts";
@@ -163,7 +164,7 @@ export class GatewayBrowserClient {
     this.pendingConnectError = undefined;
     this.pendingDeviceTokenRetry = false;
     this.deviceTokenRetryBudgetUsed = false;
-    this.flushPending(new Error("gateway client stopped"));
+    this.flushPending(new Error(t("common.errors.gatewayClientStopped")));
   }
 
   get connected() {
@@ -382,7 +383,7 @@ export class GatewayBrowserClient {
         ) {
           clearDeviceAuthToken({ deviceId: deviceIdentity.deviceId, role });
         }
-        this.ws?.close(CONNECT_FAILED_CLOSE_CODE, "connect failed");
+        this.ws?.close(CONNECT_FAILED_CLOSE_CODE, t("common.errors.connectFailed"));
       });
   }
 
@@ -434,7 +435,7 @@ export class GatewayBrowserClient {
         pending.reject(
           new GatewayRequestError({
             code: res.error?.code ?? "UNAVAILABLE",
-            message: res.error?.message ?? "request failed",
+            message: res.error?.message ?? t("common.errors.requestFailed"),
             details: res.error?.details,
           }),
         );
@@ -445,7 +446,7 @@ export class GatewayBrowserClient {
 
   request<T = unknown>(method: string, params?: unknown): Promise<T> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      return Promise.reject(new Error("gateway not connected"));
+      return Promise.reject(new Error(t("common.errors.gatewayNotConnected")));
     }
     const id = generateUUID();
     const frame = { type: "req", id, method, params };

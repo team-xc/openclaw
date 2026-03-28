@@ -96,7 +96,10 @@ export function renderOverview(props: OverviewProps) {
     ]);
     const authFailed = props.lastErrorCode
       ? authFailureCodes.has(props.lastErrorCode)
-      : lower.includes("unauthorized") || lower.includes("connect failed");
+      : lower.includes("unauthorized") ||
+        lower.includes("未授权") ||
+        lower.includes("connect failed") ||
+        lower.includes(t("common.errors.connectFailed").toLowerCase());
     if (!authFailed) {
       return null;
     }
