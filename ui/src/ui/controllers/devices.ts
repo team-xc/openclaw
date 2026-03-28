@@ -128,7 +128,7 @@ export async function rotateDeviceToken(
           scopes: res.scopes ?? params.scopes ?? [],
         });
       }
-      window.prompt("New device token (copy and store securely):", res.token);
+      window.prompt(t("nodes.newTokenPrompt"), res.token);
     }
     await loadDevices(state);
   } catch (err) {
@@ -143,7 +143,12 @@ export async function revokeDeviceToken(
   if (!state.client || !state.connected) {
     return;
   }
-  const confirmed = window.confirm(`Revoke token for ${params.deviceId} (${params.role})?`);
+  const confirmed = window.confirm(
+    t("nodes.confirmRevokeToken", {
+      deviceId: params.deviceId,
+      role: params.role,
+    }),
+  );
   if (!confirmed) {
     return;
   }

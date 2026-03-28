@@ -999,6 +999,8 @@ export const en: TranslationMap = {
     approve: "Approve",
     reject: "Reject",
     confirmRejectPairing: "Reject this device pairing request?",
+    newTokenPrompt: "New device token (copy and store securely):",
+    confirmRevokeToken: "Revoke token for {deviceId} ({role})?",
     roles: "roles: {value}",
     scopes: "scopes: {value}",
     tokens: "Tokens",

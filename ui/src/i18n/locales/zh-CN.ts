@@ -991,6 +991,8 @@ export const zh_CN: TranslationMap = {
     approve: "批准",
     reject: "拒绝",
     confirmRejectPairing: "要拒绝这个设备配对请求吗？",
+    newTokenPrompt: "新设备令牌（请复制并妥善保存）：",
+    confirmRevokeToken: "要吊销 {deviceId}（{role}）的令牌吗？",
     roles: "角色：{value}",
     scopes: "范围：{value}",
     tokens: "令牌",
