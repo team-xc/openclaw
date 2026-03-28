@@ -1,3 +1,4 @@
+import { t } from "../../i18n/index.ts";
 import { toNumber } from "../format.ts";
 import type { GatewayBrowserClient } from "../gateway.ts";
 import type { SessionsListResult } from "../types.ts";
@@ -102,9 +103,7 @@ export async function deleteSession(state: SessionsState, key: string): Promise<
   if (state.sessionsLoading) {
     return false;
   }
-  const confirmed = window.confirm(
-    `Delete session "${key}"?\n\nDeletes the session entry and archives its transcript.`,
-  );
+  const confirmed = window.confirm(t("sessions.confirmDelete", { key }));
   if (!confirmed) {
     return false;
   }

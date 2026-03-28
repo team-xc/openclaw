@@ -323,6 +323,8 @@ export const en: TranslationMap = {
     includeUnknown: "Include unknown",
     store: "Store: {path}",
     empty: "No sessions found.",
+    confirmDelete:
+      'Delete session "{key}"?\n\nDeletes the session entry and archives its transcript.',
     columns: {
       key: "Key",
       label: "Label",

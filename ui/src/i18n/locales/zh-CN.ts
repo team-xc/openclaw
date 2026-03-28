@@ -320,6 +320,7 @@ export const zh_CN: TranslationMap = {
     includeUnknown: "包含未知",
     store: "存储：{path}",
     empty: "未找到会话。",
+    confirmDelete: "要删除会话“{key}”吗？\n\n这会删除会话条目，并归档它的聊天记录。",
     columns: {
       key: "键",
       label: "标签",
