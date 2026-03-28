@@ -92,6 +92,18 @@ describe("i18n", () => {
     expect(fresh.t("common.health")).toBe("健康状况");
   });
 
+  it("falls back safely when browser globals are unavailable", async () => {
+    vi.resetModules();
+    vi.unstubAllGlobals();
+
+    const fresh = await import("../lib/translate.ts");
+
+    expect(fresh.i18n.getLocale()).toBe("en");
+    expect(fresh.t("common.health")).toBe("Health");
+    await expect(fresh.i18n.setLocale("zh-CN")).resolves.toBeUndefined();
+    expect(fresh.t("common.health")).toBe("健康状况");
+  });
+
   it("keeps the version label available in shipped locales", () => {
     expect((pt_BR.common as { version?: string }).version).toBeTruthy();
     expect((zh_CN.common as { version?: string }).version).toBeTruthy();

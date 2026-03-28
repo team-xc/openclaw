@@ -87,6 +87,7 @@ export default defineConfig({
       "ui/src/ui/controllers/agents.test.ts",
       "ui/src/ui/controllers/chat.test.ts",
       "ui/src/ui/tool-display.test.ts",
+      "ui/src/i18n/test/translate.test.ts",
     ],
     setupFiles: ["test/setup.ts"],
     exclude: [

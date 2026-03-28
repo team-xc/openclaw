@@ -10,7 +10,19 @@ import type { Locale, TranslationMap } from "./types.ts";
 
 type Subscriber = (locale: Locale) => void;
 
+type StorageLike = Pick<Storage, "getItem" | "setItem">;
+
 export { SUPPORTED_LOCALES, isSupportedLocale };
+
+function getStorage(): StorageLike | null {
+  return typeof globalThis.localStorage === "undefined" ? null : globalThis.localStorage;
+}
+
+function getNavigatorLanguage(): string {
+  return typeof globalThis.navigator === "undefined"
+    ? DEFAULT_LOCALE
+    : globalThis.navigator.language;
+}
 
 class I18nManager {
   private locale: Locale = DEFAULT_LOCALE;
@@ -22,11 +34,11 @@ class I18nManager {
   }
 
   private resolveInitialLocale(): Locale {
-    const saved = localStorage.getItem("openclaw.i18n.locale");
+    const saved = getStorage()?.getItem("openclaw.i18n.locale");
     if (isSupportedLocale(saved)) {
       return saved;
     }
-    return resolveNavigatorLocale(navigator.language);
+    return resolveNavigatorLocale(getNavigatorLanguage());
   }
 
   private loadLocale() {
@@ -64,7 +76,7 @@ class I18nManager {
     }
 
     this.locale = locale;
-    localStorage.setItem("openclaw.i18n.locale", locale);
+    getStorage()?.setItem("openclaw.i18n.locale", locale);
     this.notify();
   }
 
