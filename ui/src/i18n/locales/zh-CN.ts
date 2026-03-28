@@ -127,7 +127,7 @@ export const zh_CN: TranslationMap = {
       title: "备注",
       subtitle: "远程控制设置的快速提醒。",
       tailscaleTitle: "Tailscale Serve",
-      tailscaleText: "首选 serve 模式以通过 tailnet 身份验证将网关保持在回环地址。",
+      tailscaleText: "首选 Serve 模式，以通过 tailnet 身份验证将网关保持在回环地址。",
       sessionTitle: "会话清理",
       sessionText: "使用 /new 或 sessions.patch 重置上下文。",
       cronTitle: "定时任务提醒",
@@ -604,7 +604,8 @@ export const zh_CN: TranslationMap = {
       loadFallbackHint: "无法加载运行时工具目录，正在显示回退列表。",
       loadConfigHint: "加载网关配置以调整工具预设。",
       explicitAllowlistHint: "该代理在配置中使用了显式允许列表。工具覆盖项请在配置标签页里管理。",
-      globalAllowHint: "已设置全局 tools.allow。代理覆盖项不能启用被全局阻止的工具。",
+      globalAllowHint:
+        "已设置全局工具允许列表（tools.allow）。代理覆盖项不能启用被全局阻止的工具。",
       profile: "预设",
       source: "来源",
       status: "状态",
@@ -653,7 +654,7 @@ export const zh_CN: TranslationMap = {
       missing: "缺少：{value}",
       reason: "原因：{value}",
       reasonDisabled: "已禁用",
-      reasonBlockedByAllowlist: "被 allowlist 阻止",
+      reasonBlockedByAllowlist: "被允许列表阻止",
     },
     skillGroups: {
       workspace: "工作区技能",
@@ -937,8 +938,8 @@ export const zh_CN: TranslationMap = {
     export: {
       filtered: "筛选结果",
       visible: "当前可见",
-      filteredFile: "filtered",
-      visibleFile: "visible",
+      filteredFile: "筛选结果",
+      visibleFile: "当前可见",
       button: "导出{label}",
     },
     filter: "筛选",
