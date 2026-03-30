@@ -18,6 +18,22 @@ It intentionally drops the public product shell:
 - most public docs and community metadata
 - non-Telegram bundled extensions
 
+## Fork-specific changes
+
+Recent Telegram-focused changes in this fork:
+
+- preserve Telegram media downloads when an explicit network proxy is configured
+- prune redundant top-level Telegram multi-account defaults after config saves
+- localize the Web UI plus Chinese command / Telegram reply surfaces
+- add Debug/Admin actions to build the project and restart the gateway
+- merge Telegram account-level TTS settings with global TTS defaults for per-bot voices
+- keep Telegram custom commands usable alongside native commands, including native passthrough for quota
+- clear stale Telegram emoji reactions when a reply resolves to `NO_REPLY`
+- add session-level fast mode controls and preserve think / fast settings across `/new` and `/reset`
+- honor the configured default Telegram account in group fallback routing
+- avoid silent background STT for unaddressed multi-bot Telegram group voice messages
+- start Telegram typing earlier during explicit voice transcription / fallback flows
+
 ## Local workflow
 
 Runtime: Node `>=22.12.0`
